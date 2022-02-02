@@ -31,6 +31,12 @@ int main()
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Below is the impementation of Parser::ToLower()
+// 
+///////////////////////////////////////////////////////////////////////////////
+
 std::string wl::Parser::ToLower(const std::string& str) const
 {
     std::string copy;
@@ -42,6 +48,12 @@ std::string wl::Parser::ToLower(const std::string& str) const
 
     return copy;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Below is the impementation of Command class
+// 
+///////////////////////////////////////////////////////////////////////////////
 
 wl::Command::Command() : op(wl::Op::EMPTY), arg_2(0) { }
 
@@ -160,6 +172,12 @@ void wl::Command::Receive()
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Below is the impementation of Dictionary::Node class
+// 
+///////////////////////////////////////////////////////////////////////////////
+
 wl::Dictionary::Node::Node(char ch) : ch(ch) { }
 
 wl::Dictionary::Node::~Node()
@@ -226,6 +244,12 @@ void wl::Dictionary::Node::Insert(const std::string* word, uint16_t count)
 
     curr->counts.emplace_back(count);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Below is the impementation of Dictionary class
+// 
+///////////////////////////////////////////////////////////////////////////////
 
 wl::Dictionary::Dictionary() : word_list(new Node(0)), is_loadable(true) { }
 
@@ -340,6 +364,12 @@ uint16_t wl::Dictionary::Locate(const std::string word, uint16_t occurrence) con
 {
     return this->word_list->Search(&word, occurrence);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// 
+// Below is the impementation of Context class
+// 
+///////////////////////////////////////////////////////////////////////////////
 
 wl::Context::Context() 
     : dictionary(new Dictionary()), result(-2), destoryed(false), prev_ops{ wl::Op::EMPTY } { }
