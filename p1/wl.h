@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // 
-// Project Name:		Word Locator
-// Student:				Zihan Zhao
-// Student ID:			908 266 6315
-// UW Email Address:	zzhao383@wisc.edu
+// Project Name:        Word Locator
+// Student:             Zihan Zhao
+// Student ID:          908 266 6315
+// UW Email Address:    zzhao383@wisc.edu
 // 
 ///////////////////////////////////////////////////////////////////////////////
 // 
