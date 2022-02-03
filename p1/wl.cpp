@@ -257,31 +257,17 @@ uint16_t wl::Dictionary::Node::Search(const std::string* word, uint16_t occurren
         {
             size_t pre_size = next->prefix.size();
             size_t sub_size = sub.size();
-            if (pre_size > sub_size)
+            if (pre_size == sub_size && next->prefix.compare(sub) == 0)
             {
-                return 0;
+                i += sub_size;
             }
-            else if (pre_size == sub_size)
+            else if (pre_size < sub_size && next->prefix.compare(sub.substr(0, pre_size)) == 0)
             {
-                if (next->prefix.compare(sub) == 0)  // found
-                {
-                    i += sub_size;
-                }
-                else
-                {
-                    return 0;
-                }
+                i += pre_size - 1;
             }
             else
             {
-                if (next->prefix.compare(sub.substr(0, pre_size)) == 0)
-                {
-                    i += pre_size - 1;
-                }
-                else
-                {
-                    return 0;
-                }
+                return 0;
             }
         }
     }
@@ -320,7 +306,6 @@ void wl::Dictionary::Node::Insert(const std::string* word, uint16_t count)
                 if (sub_size > pre_size)
                 {
                     i += pre_size - 1;
-                    continue;
                 }
                 else if (sub_size < pre_size)
                 {
