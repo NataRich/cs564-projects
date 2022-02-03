@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <regex>
 #include <string>
 #include <vector>
 #include <cctype>
@@ -144,29 +145,10 @@ namespace wl
 
 	private:
 		/// <summary>
-		/// Checks if the given string can be parsed into a positive integer.
-		/// </summary>
-		/// 
-		/// <param name="str">The string to be checked.</param>
-		/// <returns>True if `str` can be parsed into a positive integer; 
-		/// false, otherwsie.</returns>
-		bool IsPosNumber(const std::string* str) const;
-
-		/// <summary>
-		/// Checks if the given string contains any invalid character.
-		/// </summary>
-		/// 
-		/// <param name="str">The string to be checked.</param>
-		/// <returns>True if `str` does not contain any invalid character; 
-		/// false, otherwise.</returns>
-		bool IsValid(const std::string* str) const;
-
-		/// <summary>
 		/// Parses the command into a vector of strings.
 		/// </summary>
 		/// 
-		/// This function simply treats whitespace as the delimiter and 
-		/// splits the command string into multiple parts.
+		/// This function uses regular expressions to parse the given command.
 		/// 
 		/// <param name="command">The user input.</param>
 		/// <param name="vec">The result of parsing.</param>
@@ -251,13 +233,15 @@ namespace wl
 			std::vector<uint16_t> counts;
 
 			/// <summary>
-			/// The character as a path.
+			/// The prefix of a word.
 			/// </summary>
 			/// 
-			/// The root node has `ch` defaulted to 0.
-			char ch;
+			/// The root node has `prefix` defaulted to an empty string.
+			std::string prefix;
 
 		private:
+			int Diff(std::string str1, std::string str2) const;
+
 			/// <summary>
 			/// Checks if any of the children of the current node contains `next_ch`.
 			/// </summary>
@@ -269,11 +253,11 @@ namespace wl
 
 		public:
 			/// <summary>
-			/// Initializes `ch`.
+			/// Initializes `prefix`.
 			/// </summary>
 			/// 
-			/// <param name="ch">The current character.</param>
-			Node(char ch);
+			/// <param name="prefix">The prefix to be set.</param>
+			Node(std::string prefix);
 
 			/// <summary>
 			/// Clears the dynamically allocated memory.
