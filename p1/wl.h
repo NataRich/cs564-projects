@@ -378,7 +378,7 @@ namespace wl
 		/// <summary>
 		/// A bool value indicating whether the program should destroy.
 		/// </summary>
-		bool destoryed;
+		bool destroyed;
 
 		/// <summary>
 		/// A record of previous operations so that the program can allow two
@@ -409,8 +409,8 @@ namespace wl
 		/// Checks if the context has been destroyed.
 		/// </summary>
 		/// 
-		/// <returns>`destoryed`</returns>
-		bool Destoryed() const;
+		/// <returns>`destroyed`</returns>
+		bool Destroyed() const;
 
 	public:
 		/// <summary>

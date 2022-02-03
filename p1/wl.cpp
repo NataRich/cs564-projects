@@ -26,7 +26,7 @@ int main()
     {
         command.Receive();
         context.Execute(&command);
-    } while (!context.Destoryed());
+    } while (!context.Destroyed());
 
     return 0;
 }
@@ -96,13 +96,11 @@ void wl::Command::Parse(const std::string* command, std::vector<std::string>* ve
     if (match.size() != 0)
     {
         vec->emplace_back(this->ToLower(match.str(1)));
-        if (match.str(3).empty())
         {
-            vec->emplace_back(match.str(4));
-        }
-        else
-        {
-            vec->emplace_back(match.str(3));
+            match.str(3).empty() ?
+                vec->emplace_back(match.str(4))
+                :
+                vec->emplace_back(match.str(3));
         }
         return;
     }
@@ -472,7 +470,7 @@ uint16_t wl::Dictionary::Locate(const std::string word, uint16_t occurrence) con
 ///////////////////////////////////////////////////////////////////////////////
 
 wl::Context::Context()
-    : dictionary(new Dictionary()), result(-2), destoryed(false), prev_ops{ wl::Op::EMPTY } { }
+    : dictionary(new Dictionary()), result(-2), destroyed(false), prev_ops{ wl::Op::EMPTY } { }
 
 wl::Context::~Context()
 {
@@ -500,9 +498,9 @@ void wl::Context::PrintResult()
     this->result = -2;  // reset
 }
 
-bool wl::Context::Destoryed() const
+bool wl::Context::Destroyed() const
 {
-    return this->destoryed;
+    return this->destroyed;
 }
 
 void wl::Context::Execute(const Command* command)
@@ -510,7 +508,7 @@ void wl::Context::Execute(const Command* command)
     switch (command->GetOperation())
     {
     case wl::Op::END:
-        this->destoryed = true;
+        this->destroyed = true;
         this->prev_ops[0] = this->prev_ops[1];
         this->prev_ops[1] = wl::Op::END;
         break;
