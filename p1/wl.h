@@ -141,7 +141,7 @@ namespace wl
 		/// </summary>
 		/// 
 		/// By default, the second argument is 0.
-		uint16_t arg_2;
+		uint32_t arg_2;
 
 	private:
 		/// <summary>
@@ -230,7 +230,7 @@ namespace wl
 			/// occurence of the given string; and so on... If the vector size
 			/// is not 0, then it means there exists a word that terminates 
 			/// here; otherwise, there doesn't exist that word.
-			std::vector<uint16_t> counts;
+			std::vector<uint32_t> counts;
 
 			/// <summary>
 			/// The prefix of a word.
@@ -240,7 +240,17 @@ namespace wl
 			std::string prefix;
 
 		private:
+			/// <summary>
+			/// Gets the index at which two strings first differ.
+			/// </summary>
+			/// 
+			/// <param name="str1">One of the strings to be compared.</param>
+			/// <param name="str2">The other string to be compared.</param>
+			/// <returns>The index at which two strings first differ; 
+			/// -1, otherwise</returns>
 			int Diff(std::string str1, std::string str2) const;
+
+			void Split(Node* node, int i_diff) const;
 
 			/// <summary>
 			/// Checks if any of the children of the current node contains `next_ch`.
@@ -272,7 +282,7 @@ namespace wl
 			/// <param name="word">The word to be searched for.</param>
 			/// <param name="occurrence">The occurrence of the word.</param>
 			/// <returns>0 if not found; any positive integer, otherwise.</returns>
-			uint16_t Search(const std::string* word, uint16_t occurrence) const;
+			uint16_t Search(const std::string* word, uint32_t occurrence) const;
 
 		public:
 			/// <summary>
@@ -281,7 +291,7 @@ namespace wl
 			/// 
 			/// <param name="word">The word to be stored.</param>
 			/// <param name="count">The word count until this word.</param>
-			void Insert(const std::string* word, uint16_t count);
+			void Insert(const std::string* word, uint32_t count);
 		};
 
 	private:
@@ -336,7 +346,7 @@ namespace wl
 		/// <param name="word">The word to be searched for.</param>
 		/// <param name="occurrence">The occurrence of the word.</param>
 		/// <returns>0 if not found; any positive integer, otherwise.</returns>
-		uint16_t Locate(const std::string word, uint16_t occurrence) const;
+		uint16_t Locate(const std::string word, uint32_t occurrence) const;
 
 	public:
 		/// <summary>
@@ -373,7 +383,7 @@ namespace wl
 		/// <summary>
 		/// A number indicating the result of the execution of a command.
 		/// </summary>
-		int32_t result;
+		int64_t result;
 
 		/// <summary>
 		/// A bool value indicating whether the program should destroy.

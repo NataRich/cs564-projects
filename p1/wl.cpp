@@ -211,7 +211,7 @@ int wl::Dictionary::Node::Diff(std::string str1, std::string str2) const
 {
     size_t len_1 = str1.size(), len_2 = str2.size();
     size_t max_length = std::min(len_1, len_2);
-    size_t i_diff = -1;
+    int i_diff = -1;
     for (size_t j = 1; j < max_length; j++)
     {
         if (str1.at(j) != str2.at(j))
@@ -222,6 +222,18 @@ int wl::Dictionary::Node::Diff(std::string str1, std::string str2) const
     }
 
     return i_diff;
+}
+
+void wl::Dictionary::Node::Split(Node* node, int i_diff) const
+{
+    std::string retain = node->prefix.substr(0, i_diff);
+    std::string suffix = node->prefix.substr(i_diff);
+    node->prefix = retain;
+
+    Node* split_node = new Node(suffix);
+    split_node->counts.swap(node->counts);
+    split_node->children.swap(node->children);
+    node->children.emplace_back(split_node);
 }
 
 wl::Dictionary::Node* wl::Dictionary::Node::Next(char next_ch) const
@@ -239,7 +251,7 @@ wl::Dictionary::Node* wl::Dictionary::Node::Next(char next_ch) const
     return nullptr;
 }
 
-uint16_t wl::Dictionary::Node::Search(const std::string* word, uint16_t occurrence) const
+uint16_t wl::Dictionary::Node::Search(const std::string* word, uint32_t occurrence) const
 {
     const Node* curr = this, * next = nullptr;
     size_t length = word->size();
@@ -278,7 +290,7 @@ uint16_t wl::Dictionary::Node::Search(const std::string* word, uint16_t occurren
     return 0;
 }
 
-void wl::Dictionary::Node::Insert(const std::string* word, uint16_t count)
+void wl::Dictionary::Node::Insert(const std::string* word, uint32_t count)
 {
     Node* curr = this, * next = nullptr;
     size_t length = word->size();
@@ -307,13 +319,8 @@ void wl::Dictionary::Node::Insert(const std::string* word, uint16_t count)
                 }
                 else if (sub_size < pre_size)
                 {
-                    Node* child = new Node(next->prefix.substr(sub_size));
-                    child->children.swap(next->children);
-                    child->counts.swap(next->counts);
-
-                    next->children.emplace_back(child);
+                    this->Split(next, sub_size);
                     next->counts.emplace_back(count);
-                    next->prefix = next->prefix.substr(0, sub_size);
 
                     break;
                 }
@@ -326,18 +333,7 @@ void wl::Dictionary::Node::Insert(const std::string* word, uint16_t count)
             }
             else
             {
-                Node* org_child = new Node(next->prefix.substr(i_diff));
-                org_child->children.swap(next->children);
-                org_child->counts.swap(next->counts);
-
-                Node* new_child = new Node(sub.substr(i_diff));
-                new_child->counts.emplace_back(count);
-
-                next->children.emplace_back(org_child);
-                next->children.emplace_back(new_child);
-                next->prefix = next->prefix.substr(0, i_diff);
-
-                break;
+                this->Split(next, i_diff);
             }
         }
     }
@@ -437,7 +433,7 @@ void wl::Dictionary::Load(const std::string path)
     std::string line;
     std::vector<std::string> words;
     words.reserve(20);  // an estimated max. number of words in a line
-    uint16_t total_count = 0;
+    uint32_t total_count = 0;
     if (f.is_open())
     {
         while (std::getline(f, line))
@@ -458,7 +454,7 @@ void wl::Dictionary::Load(const std::string path)
     }
 }
 
-uint16_t wl::Dictionary::Locate(const std::string word, uint16_t occurrence) const
+uint16_t wl::Dictionary::Locate(const std::string word, uint32_t occurrence) const
 {
     return this->word_list->Search(&word, occurrence);
 }
