@@ -26,13 +26,16 @@
 #include <iostream>
 
 /// <summary>
-/// A scope used to organize identifiers used in this project.
+/// A scope used to organize identifiers used for Word Locator.
 /// </summary>
 /// 
 /// This namespace contains an enum class `wl::Op` which specifies 6 
-/// distinct operations, i.e. each user input must correspond to one of 
-/// the 6 operations. See more about what each operation does below.
-/// 
+/// distinct operations, i.e. each user input must correspond to one of the 6
+/// operations; a command parser `wl::Command` which parses and stores the user
+/// input; a dictionary `wl::Dictionary` which parses and stores the words read 
+/// from the given file in a radix tree for searching/locating; and a context
+/// manager `wl::Context` which encapsulates all the details of executions and
+/// provides simple interfaces.
 namespace wl
 {
 	/// <summary>
@@ -41,7 +44,7 @@ namespace wl
 	enum class Op
 	{
 		/// <summary>
-		/// Waits for the next command (default).
+		/// Waits for the next command, also the default operation.
 		/// </summary>
 		EMPTY,
 
@@ -56,7 +59,7 @@ namespace wl
 		NEW,
 
 		/// <summary>
-		/// Loads words in a file to the empty dictionary usually called after 
+		/// Loads words in a file to the empty dictionary usually called after
 		/// new command.
 		/// </summary>
 		LOAD,
@@ -106,7 +109,7 @@ namespace wl
 		/// rules. Therefore, it requires to be overwritten in the derived classes.
 		/// 
 		/// <param name="str">The string to be parsed.</param>
-		/// <param name="vec">The space that stores the result of parsing.</param>
+		/// <param name="vec">The store the result of parsing.</param>
 		virtual void Parse(const std::string& str, std::vector<std::string>& vec) const = 0;
 
 	public:
@@ -275,9 +278,9 @@ namespace wl
 			/// find the first and only match where the first character of the 
 			/// child's `prefix` is `next_ch`.
 			/// 
-			/// <param name="next_ch">The next character to be searched for.</param>
-			/// <returns>The node pointer that contains `next_ch` or `nullptr` if 
-			/// not found.</returns>
+			/// <param name="next_ch">The next char to be searched for.</param>
+			/// <returns>The node pointer that contains `next_ch` or `nullptr`
+			/// if not found.</returns>
 			Node* Next(char next_ch) const;
 
 		public:
@@ -303,7 +306,7 @@ namespace wl
 			/// 
 			/// <param name="word">The word to be searched for.</param>
 			/// <param name="occurrence">The occurrence of the word.</param>
-			/// <returns>0 if not found; any positive integer, otherwise.</returns>
+			/// <returns>0 if not found; positive integer, otherwise.</returns>
 			uint32_t Search(const std::string& word, uint32_t occurrence) const;
 
 		public:
@@ -326,7 +329,7 @@ namespace wl
 		Node* word_list;
 
 		/// <summary>
-		/// A bool value indicating whether new set of words can be loaded to memory.
+		/// A bool indicating whether new set of words can be loaded to memory.
 		/// </summary>
 		bool is_loadable;
 
@@ -336,8 +339,8 @@ namespace wl
 		/// </summary>
 		/// 
 		/// This function treats any characters besides letters, numbers and 
-		/// apostrophes as whitespaces, so any parsed words, or words considered 
-		/// valid, contain only letters, numbers, and apostrophes. In the meantime,
+		/// apostrophes as whitespaces, so any parsed words, or words considered
+		/// valid, contain only letters, numbers, and apostrophes. Meanwhile,
 		/// all uppercase letters are transfomred into lowercase letters.
 		/// 
 		/// <param name="line">A line of words.</param>
@@ -429,8 +432,8 @@ namespace wl
 
 	public:
 		/// <summary>
-		/// Initializes a dictionary, `result` to -2 (a default value), `destroyed` 
-		/// to `false`, and previous operations to `wl::Op::EMPTY`.
+		/// Initializes a dictionary, `result` to -2 (a default value), 
+		/// `destroyed` to `false`, and previous operations to `wl::Op::EMPTY`.
 		/// </summary>
 		Context();
 
