@@ -294,7 +294,7 @@ uint32_t wl::Dictionary::Node::Search(const std::string& word, uint32_t occurren
         {
             size_t pre_size = next->prefix.size();
             size_t sub_size = sub.size();
-            if (pre_size == sub_size && next->prefix.compare(sub) == 0)
+            if (pre_size == sub_size && next->prefix.compare(sub) == 0) // Find exact match
             {
                 i += sub_size;  // Add a large enough number to end the loop
             }
@@ -473,19 +473,19 @@ void wl::Dictionary::Load(const std::string& path)
     std::ifstream f(path);
     std::string line;
     uint32_t total_count = 0;
-    std::vector<std::string> words;
+    std::vector<std::string> buffer;
     if (f.is_open())
     {
-        while (std::getline(f, line))
+        while (std::getline(f, line))  // Parse file line by line
         {
-            this->Parse(line, words);
-            size_t length = words.size();
+            this->Parse(line, buffer);
+            size_t length = buffer.size();
             for (size_t i = 0; i < length; i++)
             {
-                this->word_list->Insert(words[i], ++total_count);
+                this->word_list->Insert(buffer[i], ++total_count);
             }
 
-            words.clear();
+            buffer.clear();
         }
 
         f.close();
@@ -556,6 +556,7 @@ void wl::Context::Execute(const Command& command)
         break;
 
     case wl::Op::LOAD:
+        // Allow two successive load commands
         if (this->prev_ops[1] == wl::Op::LOAD && this->prev_ops[0] != wl::Op::LOAD)
         {
             this->dictionary->New();
