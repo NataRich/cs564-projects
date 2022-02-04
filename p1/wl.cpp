@@ -472,13 +472,8 @@ void wl::Dictionary::Load(const std::string& path)
 
     std::ifstream f(path);
     std::string line;
-    std::vector<std::string> words;
-
-    // An estimated max. number of words in a line
-    // Added for time efficiency
-    words.reserve(20);
-
     uint32_t total_count = 0;
+    std::vector<std::string> words;
     if (f.is_open())
     {
         while (std::getline(f, line))
@@ -577,7 +572,6 @@ void wl::Context::Execute(const Command& command)
             this->result = -1;
         }
         break;
-
 
     case wl::Op::LOCATE:
         this->result = this->dictionary->Locate(command.GetFirstArg(), command.GetSecondArg());
