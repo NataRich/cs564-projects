@@ -107,7 +107,7 @@ namespace wl
 		/// 
 		/// <param name="str">The string to be parsed.</param>
 		/// <param name="vec">The space that stores the result of parsing.</param>
-		virtual void Parse(const std::string* str, std::vector<std::string>* vec) const = 0;
+		virtual void Parse(const std::string& str, std::vector<std::string>& vec) const = 0;
 
 	public:
 		/// <summary>
@@ -145,14 +145,17 @@ namespace wl
 
 	private:
 		/// <summary>
-		/// Parses the command into a vector of strings.
+		/// Modifies the given vector parameter to save the parsing result.
 		/// </summary>
 		/// 
-		/// This function uses regular expressions to parse the given command.
+		/// This function uses regular expressions to match the given command.
+		/// If the given command is empty or does not find a match, then it is
+		/// an empty command or an invalid command. These regular expressions
+		/// define the formats of commands allowed. 
 		/// 
 		/// <param name="command">The user input.</param>
 		/// <param name="vec">The result of parsing.</param>
-		void Parse(const std::string* command, std::vector<std::string>* vec) const;
+		void Parse(const std::string& command, std::vector<std::string>& vec) const;
 
 	public:
 		/// <summary>
@@ -181,7 +184,7 @@ namespace wl
 		/// </summary>
 		/// 
 		/// <returns>`arg_2`</returns>
-		uint16_t GetSecondArg() const;
+		uint32_t GetSecondArg() const;
 
 	public:
 		/// <summary>
@@ -209,8 +212,8 @@ namespace wl
 	{
 	private:
 		/// <summary>
-		/// A utility class that stores the paths to find a given word and the
-		/// word counts until the given word's nth occurrence.
+		/// A radix tree that stores the paths to find a given word and the
+		/// word counts until the word's nth occurrence.
 		/// </summary>
 		class Node
 		{
@@ -229,7 +232,7 @@ namespace wl
 			/// given string; at index 1 contains the word count until 2nd
 			/// occurence of the given string; and so on... If the vector size
 			/// is not 0, then it means there exists a word that terminates 
-			/// here; otherwise, there doesn't exist that word.
+			/// here; otherwise, that word doesn't exist.
 			std::vector<uint32_t> counts;
 
 			/// <summary>
@@ -248,13 +251,29 @@ namespace wl
 			/// <param name="str2">The other string to be compared.</param>
 			/// <returns>The index at which two strings first differ; 
 			/// -1, otherwise</returns>
-			int Diff(std::string str1, std::string str2) const;
+			int Diff(std::string& str1, std::string& str2) const;
 
+			/// <summary>
+			/// Splits a node.
+			/// </summary>
+			/// 
+			/// This function splits a node from the given index. Specifically,
+			/// if `i_diff` is 1, then for the node "sing", it will split since
+			/// the 'i' character. Therefore the result would be "s" -> "ing",
+			/// where `counts` of the original "sing" node will be copied to
+			/// the split node "ing", and "ing" becomes a child of "s",
+			/// 
+			/// <param name="node">The node to be split.</param>
+			/// <param name="i_diff">The index at which the split starts</param>
 			void Split(Node* node, int i_diff) const;
 
 			/// <summary>
-			/// Checks if any of the children of the current node contains `next_ch`.
+			/// Returns the reference of node whose `prefix` begins with `next_ch`.
 			/// </summary>
+			/// 
+			/// This function loops through the current node's `children` to 
+			/// find the first and only match where the first character of the 
+			/// child's `prefix` is `next_ch`.
 			/// 
 			/// <param name="next_ch">The next character to be searched for.</param>
 			/// <returns>The node pointer that contains `next_ch` or `nullptr` if 
@@ -263,10 +282,10 @@ namespace wl
 
 		public:
 			/// <summary>
-			/// Initializes `prefix`.
+			/// Initializes `prefix`, defaulted to "".
 			/// </summary>
 			/// 
-			/// <param name="prefix">The prefix to be set.</param>
+			/// <param name="prefix">The prefix of the node.</param>
 			Node(std::string prefix);
 
 			/// <summary>
@@ -276,27 +295,33 @@ namespace wl
 
 		public:
 			/// <summary>
-			/// Searches for the word count until the nth occurrence of the given word.
+			/// Returns the word count until `occurrence`th occurrence of `word`.
 			/// </summary>
+			/// 
+			/// This function searches for `word` iteratively to save memory used
+			/// on stack.
 			/// 
 			/// <param name="word">The word to be searched for.</param>
 			/// <param name="occurrence">The occurrence of the word.</param>
 			/// <returns>0 if not found; any positive integer, otherwise.</returns>
-			uint16_t Search(const std::string* word, uint32_t occurrence) const;
+			uint32_t Search(const std::string& word, uint32_t occurrence) const;
 
 		public:
 			/// <summary>
-			/// Inserts the given word and corresponding word count into the trie.
+			/// Inserts `word` and word `count` into the data structure.
 			/// </summary>
+			/// 
+			/// This function inserts the word iteratively to save memory used
+			/// on stack.
 			/// 
 			/// <param name="word">The word to be stored.</param>
 			/// <param name="count">The word count until this word.</param>
-			void Insert(const std::string* word, uint32_t count);
+			void Insert(const std::string& word, uint32_t count);
 		};
 
 	private:
 		/// <summary>
-		/// The root of the dictionary trie.
+		/// The root of the radix tree.
 		/// </summary>
 		Node* word_list;
 
@@ -317,7 +342,7 @@ namespace wl
 		/// 
 		/// <param name="line">A line of words.</param>
 		/// <param name="vec">The result of parsing.</param>
-		void Parse(const std::string* line, std::vector<std::string>* vec) const;
+		void Parse(const std::string& line, std::vector<std::string>& vec) const;
 
 	public:
 		/// <summary>
@@ -340,13 +365,13 @@ namespace wl
 		bool IsLodable() const;
 
 		/// <summary>
-		/// Searches for the word count until the nth occurrence of the given word.
+		/// Returns the word count until `occurrence`th occurrence of `word`.
 		/// </summary>
 		/// 
 		/// <param name="word">The word to be searched for.</param>
 		/// <param name="occurrence">The occurrence of the word.</param>
 		/// <returns>0 if not found; any positive integer, otherwise.</returns>
-		uint16_t Locate(const std::string word, uint32_t occurrence) const;
+		uint32_t Locate(const std::string& word, uint32_t occurrence) const;
 
 	public:
 		/// <summary>
@@ -362,11 +387,11 @@ namespace wl
 		void New();
 
 		/// <summary>
-		/// Loads the words in the given file to the dictionary.
+		/// Loads the words in the given file to the radix tree.
 		/// </summary>
 		/// 
 		/// <param name="path">The file path.</param>
-		void Load(const std::string	 path);
+		void Load(const std::string& path);
 	};
 
 	/// <summary>
@@ -428,6 +453,6 @@ namespace wl
 		/// </summary>
 		/// 
 		/// <param name="command">A command object that has received input.</param>
-		void Execute(const Command* command);
+		void Execute(const Command& command);
 	};
 };
