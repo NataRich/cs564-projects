@@ -545,19 +545,17 @@ void wl::Context::Execute(const Command& command)
     {
     case wl::Op::END:
         this->destroyed = true;
-        this->prev_ops[0] = this->prev_ops[1];
-        this->prev_ops[1] = wl::Op::END;
+        this->prev_ops = wl::Op::END;
         break;
 
     case wl::Op::NEW:
         this->dictionary->New();
-        this->prev_ops[0] = this->prev_ops[1];
-        this->prev_ops[1] = wl::Op::NEW;
+        this->prev_ops = wl::Op::NEW;
         break;
 
     case wl::Op::LOAD:
         // Allow two successive load commands
-        if (this->prev_ops[1] == wl::Op::LOAD && this->prev_ops[0] != wl::Op::LOAD)
+        if (this->prev_ops == wl::Op::LOAD)
         {
             this->dictionary->New();
         }
@@ -565,8 +563,7 @@ void wl::Context::Execute(const Command& command)
         if (this->dictionary->IsLodable())
         {
             this->dictionary->Load(command.GetFirstArg());
-            this->prev_ops[0] = this->prev_ops[1];
-            this->prev_ops[1] = wl::Op::LOAD;
+            this->prev_ops = wl::Op::LOAD;
         }
         else
         {
@@ -576,8 +573,7 @@ void wl::Context::Execute(const Command& command)
 
     case wl::Op::LOCATE:
         this->result = this->dictionary->Locate(command.GetFirstArg(), command.GetSecondArg());
-        this->prev_ops[0] = this->prev_ops[1];
-        this->prev_ops[1] = wl::Op::LOCATE;
+        this->prev_ops = wl::Op::LOCATE;
         break;
 
     case wl::Op::INVALID:

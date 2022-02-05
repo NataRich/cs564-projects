@@ -419,10 +419,10 @@ namespace wl
 		bool destroyed;
 
 		/// <summary>
-		/// A record of previous operations so that the program can allow two
-		/// successive load commands.
+		/// A record of the previous operation so that the program can allow 
+		/// any two successive load commands.
 		/// </summary>
-		Op prev_ops[2];
+		Op prev_ops;
 
 	private:
 		/// <summary>
