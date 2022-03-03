@@ -32,7 +32,72 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		const int attrByteOffset,
 		const Datatype attrType)
 {
+	// init bTree private data members
+	this->bufMgr = bufMgrIn;
+	this->attributeType = attrType; // according to the manual, this should be INT (fixed)
+	this->attrByteOffset = attrByteOffset;
+	this->leafOccupancy = INTARRAYLEAFSIZE;
+	this->nodeOccupancy = INTARRAYNONLEAFSIZE;
 
+	// construct the indexName string (name of the index file)
+	std::ostringstream idxStr;
+	idxStr << relationName << '.' << attrByteOffset;
+	outIndexName = idxStr.str();
+
+	// check whether the specified index file exists
+	std::fstream fileTest(outIndexName);
+	if(fileTest){ // file already existed
+		fileTest.close();
+		this->file = new BlobFile(outIndexName, true);
+		// FIXME: for the next line, make a new file object in the tester, allocate the first page and print the page number -> examine whether the first page num is #0 or #1
+		this->headerPageNum = (PageId) 1;
+
+		Page *metaPage = new Page(this->file->readPage(this->headerPageNum));
+		IndexMetaInfo *metaInfo = reinterpret_cast<IndexMetaInfo *>(metaPage);
+		this->rootPageNum = metaInfo->rootPageNo;
+		// FIXME: delete heap memory if needed
+	}
+	else{ // file not existed
+		// create a file
+		this->file = new BlobFile(outIndexName, true);
+
+		// create MetaPage @388
+		Page *metaPage = new Page;
+		PageId metaPageId;
+		this->bufMgr->allocPage(this->file, metaPageId, metaPage);
+		this->headerPageNum = metaPageId;
+		
+		IndexMetaInfo *metaInfo = reinterpret_cast<IndexMetaInfo *>(metaPage);
+		relationName.copy(metaInfo->relationName, 20);
+		metaInfo->attrByteOffset = attrByteOffset;
+		metaInfo->attrType = attrType;
+
+		// create RootPage @393
+		Page *rootPage = new Page;
+		PageId rootPageId;
+		this->bufMgr->allocPage(this->file, rootPageId, rootPage);
+		metaInfo->rootPageNo = rootPageId;
+		
+		// insert entries
+		{
+			FileScan fscan(relationName, this->bufMgr);
+			try{
+				RecordId scanRid;
+				while(1){
+					// copy from main.cpp:118
+					fscan.scanNext(scanRid);
+					std::string recordStr = fscan.getRecord();
+					const char *record = recordStr.c_str();
+				}
+			}
+			catch(const EndOfFileException &e){}
+		}
+
+		// closing
+		this->bufMgr->unPinPage(this->file, metaPageId, true);
+		this->bufMgr->unPinPage(this->file, rootPageId, true);
+		this->bufMgr->flushFile(this->file);
+	}
 }
 
 
@@ -42,6 +107,11 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 
 BTreeIndex::~BTreeIndex()
 {
+	// TODO: close pinned B+ tree pages
+
+	this->bufMgr->flushFile(this->file);
+	delete this->file;
+	this->file = NULL;
 }
 
 // -----------------------------------------------------------------------------

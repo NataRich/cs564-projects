@@ -3,3 +3,6 @@
 
 # build files
 docs/*
+src/lib/*
+src/obj/*
+src/badgerdb_main
