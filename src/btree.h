@@ -128,6 +128,11 @@ struct IndexMetaInfo{
    * Page number of root page of the B+ Tree inside the file index file.
    */
 	PageId rootPageNo;
+
+	/**
+	 * The height of the tree;
+	*/
+	int height;
 };
 
 /*
@@ -291,6 +296,16 @@ class BTreeIndex {
    */
 	Operator	highOp;
 
+
+   /**
+    * insert entrys into leafnode under node n
+	*/
+	void insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is_leaf, PageKeyPair<int>* new_child);
+
+	/**
+	 * @brief scan the the Node
+	*/
+	void scanPage(Page* cur_page, bool is_leaf);
 	
  public:
 
@@ -318,7 +333,9 @@ class BTreeIndex {
 	~BTreeIndex();
 
 
-  /**
+	
+
+	/**
 	 * Insert a new entry using the pair <value,rid>. 
 	 * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
 	 * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
@@ -366,4 +383,22 @@ class BTreeIndex {
 	
 };
 
+}
+
+
+/**
+ * @brief copy an array to another array, support self copy!
+ * @param from 
+ * @param to 
+ * @param length 
+*/
+template<class T>
+void copyArray(T* from, T* to, int length) {
+	T* temp = new T[length];
+	for (int i = 0; i < length; i++) {
+		temp[i] = from[i];
+	}
+	for (int i = 0; i < length; i++) {
+		to[i] = temp[i];
+	}
 }
