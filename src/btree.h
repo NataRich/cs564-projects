@@ -301,12 +301,6 @@ class BTreeIndex {
     * insert entrys into leafnode under node n
 	*/
 	void insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is_leaf, PageKeyPair<int>* new_child);
-
-	/**
-	 * @brief scan the the Node
-	*/
-	void scanPage(Page* cur_page, bool is_leaf);
-	
  public:
 
   /**
