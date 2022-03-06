@@ -19,6 +19,8 @@
 
 //#define DEBUG
 
+
+
 namespace badgerdb
 {
 
@@ -82,11 +84,19 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 
 		// key1 <= entry < key2.
 		metaInfo->height = 1;
+		// Initialization of rootnode
+		LeafNodeInt* root_node = reinterpret_cast<LeafNodeInt*>(rootPage);
+		root_node->rightSibPageNo = Page::INVALID_NUMBER;
+		root_node->keyArray[0] = INT_MAX;
+		root_node->ridArray[0].page_number = Page::INVALID_NUMBER;
 		
 		// insert entries
-		// Do we need to set the rootpage to NULL for all values?
-		// Need to set the first entry of root_page as 0 for bounding
 		{
+			typedef struct tuple {
+				int i;
+				double d;
+				char s[64];
+			} RECORD;
 			FileScan fscan(relationName, this->bufMgr);
 			try{
 				RecordId scanRid;
@@ -95,6 +105,8 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 					fscan.scanNext(scanRid);
 					std::string recordStr = fscan.getRecord();
 					const char *record = recordStr.c_str();
+					int* key = (int*)(record + offsetof(RECORD, i));
+					insertEntry((void*)key, scanRid);
 				}
 			}
 			catch(const EndOfFileException &e){}
