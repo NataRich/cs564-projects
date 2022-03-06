@@ -346,9 +346,16 @@ void BTreeIndex::startScan(const void* lowValParm,
 				int childEntryId = currKey > lowValInt ? entryId : entryId + 1;
 				PageId childPageNum = currNonLeafNode->pageNoArray[childEntryId];
 				
-				// Failed to find a valid child node
+				// Encounter a special case:
+				// This happens only when the searched key is greater than or
+				// equal to the key of the rightmost entry of the internal node.
+				// Any empty entry has a key INT_MAX and a right page number be
+				// invalid. Hence, when the following case is encountered, it
+				// means the program has traversed to the first empty entry of
+				// the node, i.e., logically, the program wants to go into the
+				// right child of the last non-empty entry.
 				if (childPageNum == Page::INVALID_NUMBER) {
-					throw NoSuchKeyFoundException();
+					childPageNum = currNonLeafNode->pageNoArray[entryId];
 				}
 
 				// Found a valid child node
