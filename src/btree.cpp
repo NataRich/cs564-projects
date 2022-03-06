@@ -267,21 +267,19 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-	RIDKeyPair<int>* insert_entry = new RIDKeyPair<int>();
-	// FIXME: delete me
+	RIDKeyPair<int>* insert_entry;
 	insert_entry->set(rid, *((int*)key));
 	Page* root_page;
 	bufMgr->readPage(this->file, this->rootPageNum, root_page);
-	PageKeyPair<int>* new_child = new PageKeyPair<int>();
-	// FIXME: delete me
-	
+	PageKeyPair<int>* new_child;
+
 	Page* meta_page;
 	bufMgr->readPage(this->file, this->headerPageNum, meta_page);
 	IndexMetaInfo* meta_info = reinterpret_cast<IndexMetaInfo*>(meta_page);
 	bool is_leaf = (meta_info->height == 1);
 
 	this->insertUnderNode(insert_entry, root_page, is_leaf, new_child);
-	
+
 	if (new_child->pageNo == Page::INVALID_NUMBER) {
 		return;
 	}
@@ -309,10 +307,10 @@ void BTreeIndex::startScan(const void* lowValParm,
 		throw BadOpcodesException();
 	}
 	
-	lowOp = lowOpParm;
-	highOp = highOpParm;
-	lowValInt = *((int*)lowValParm);
-	highValInt = *((int*)highValParm);
+	this->lowOp = lowOpParm;
+	this->highOp = highOpParm;
+	this->lowValInt = *((int*)lowValParm);
+	this->highValInt = *((int*)highValParm);
 
 	if (lowValInt > highValInt) {
 		throw BadScanrangeException();
@@ -379,7 +377,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 	
 	// Found a leaf node possibly containing the first wanted entry
 	// Set a default (but impossible) nextEntry value
-	nextEntry = -1;
+	this->nextEntry = -1;
 	// Check if the wanted entry exists in the current leaf
 	for (int entryId = 0; entryId < INTARRAYLEAFSIZE; entryId++) {
 		int currKey = leaf->keyArray[entryId];
@@ -391,7 +389,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 		}
 
 		if (currKey > lowValInt || (currKey == lowValInt && lowOp == GTE)) {
-			nextEntry = entryId;
+			this->nextEntry = entryId;
 			break;
 		}
 	}
@@ -412,7 +410,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 	bufMgr->unPinPage(file, currentPageNum, false);
 	currentPageNum = leaf->rightSibPageNo;
 	bufMgr->readPage(file, currentPageNum, currentPageData);
-	nextEntry = 0;
+	this->nextEntry = 0;
 }
 
 // -----------------------------------------------------------------------------
