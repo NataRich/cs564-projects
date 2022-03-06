@@ -15,7 +15,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
-
+#include "limits.h" // header for INT_MAX
 
 //#define DEBUG
 
@@ -52,7 +52,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	if(fileTest){ // file already existed
 		fileTest.close();
 		this->file = new BlobFile(outIndexName, true);
-		// FIXME: for the next line, make a new file object in the tester, allocate the first page and print the page number -> examine whether the first page num is #0 or #1
+		// first page num is #1
 		this->headerPageNum = (PageId) 1;
 
 		Page *metaPage = new Page(this->file->readPage(this->headerPageNum));
@@ -273,11 +273,13 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-	RIDKeyPair<int>* insert_entry;
+	RIDKeyPair<int>* insert_entry = new RIDKeyPair<int>();
+	// FIXME: delete me
 	insert_entry->set(rid, *((int*)key));
 	Page* root_page;
 	bufMgr->readPage(this->file, this->rootPageNum, root_page);
-	PageKeyPair<int>* new_child;
+	PageKeyPair<int>* new_child = new PageKeyPair<int>();
+	// FIXME: delete me
 	
 	Page* meta_page;
 	bufMgr->readPage(this->file, this->headerPageNum, meta_page);
@@ -452,7 +454,7 @@ void BTreeIndex::scanNext(RecordId& outRid)
 		int nextKey = leaf->keyArray[0];
 			
 		// Next key still within the boundary
-		if (nextKey < highValInt || (nextKey == highValInt && highOp == LTE) {
+		if (nextKey < highValInt || (nextKey == highValInt && highOp == LTE)) {
 			nextEntry = 0;
 			return;
 		}
