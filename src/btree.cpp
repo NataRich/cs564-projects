@@ -53,19 +53,21 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		fileTest.close();
 		this->file = new BlobFile(outIndexName, true);
 		// FIXME: for the next line, make a new file object in the tester, allocate the first page and print the page number -> examine whether the first page num is #0 or #1
+		// The first page is always #1. #0 is Page::INVALID_NUMBER.
 		this->headerPageNum = (PageId) 1;
 
-		Page *metaPage = new Page(this->file->readPage(this->headerPageNum));
+		Page* metaPage;
+		bufMgr->readPage(file, headerPageNum, metaPage);
 		IndexMetaInfo *metaInfo = reinterpret_cast<IndexMetaInfo *>(metaPage);
 		this->rootPageNum = metaInfo->rootPageNo;
-		// FIXME: delete heap memory if needed
+		bufMgr->unPinPage(file, headerPageNum, false);
 	}
 	else{ // file not existed
 		// create a file
 		this->file = new BlobFile(outIndexName, true);
 
 		// create MetaPage @388
-		Page *metaPage = new Page;
+		Page *metaPage;
 		PageId metaPageId;
 		this->bufMgr->allocPage(this->file, metaPageId, metaPage);
 		this->headerPageNum = metaPageId;
@@ -76,7 +78,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		metaInfo->attrType = attrType;
 
 		// create RootPage @393
-		Page *rootPage = new Page;
+		Page *rootPage;
 		PageId rootPageId;
 		this->bufMgr->allocPage(this->file, rootPageId, rootPage);
 		metaInfo->rootPageNo = rootPageId;
@@ -91,26 +93,19 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		root_node->ridArray[0].page_number = Page::INVALID_NUMBER;
 		
 		// insert entries
-		{
-			typedef struct tuple {
-				int i;
-				double d;
-				char s[64];
-			} RECORD;
-			FileScan fscan(relationName, this->bufMgr);
-			try{
-				RecordId scanRid;
-				while(1){
-					// copy from main.cpp:118
-					fscan.scanNext(scanRid);
-					std::string recordStr = fscan.getRecord();
-					const char *record = recordStr.c_str();
-					int* key = (int*)(record + offsetof(RECORD, i));
-					insertEntry((void*)key, scanRid);
-				}
+		FileScan fscan(relationName, this->bufMgr);
+		try{
+			RecordId scanRid;
+			while(1){
+				// modify from main.cpp:118
+				fscan.scanNext(scanRid);
+				std::string recordStr = fscan.getRecord();
+				const char *record = recordStr.c_str();
+				int* key = (int*)(record + attrByteOffset);
+				insertEntry((void*)key, scanRid);
 			}
-			catch(const EndOfFileException &e){}
 		}
+		catch(const EndOfFileException &e){}
 
 		// closing
 		this->bufMgr->unPinPage(this->file, metaPageId, true);
