@@ -69,6 +69,7 @@ void createRelationRandom();
 void intTests();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void indexTests();
+void testBlobFile(BufMgr *bufMgr);
 void test1();
 void test2();
 void test3();
@@ -134,6 +135,7 @@ int main(int argc, char **argv)
 
 	File::remove(relationName);
 
+	testBlobFile(bufMgr);
 	test1();
 	test2();
 	test3();
@@ -142,6 +144,18 @@ int main(int argc, char **argv)
 	delete bufMgr;
 
   return 1;
+}
+
+void testBlobFile(BufMgr *bufMgr){
+	std::cout << "---------------------" << std::endl;
+	std::cout << "test BlobFile PageId" << std::endl;
+	auto file = new BlobFile(relationName, true);
+	auto rootPage = new Page();
+	PageId rootPageId;
+	bufMgr->allocPage(file, rootPageId, rootPage);
+	std::cout << "PageId: " << rootPageId << std::endl;
+	if (rootPage!=NULL) delete rootPage;
+	if (file!=NULL) delete file;
 }
 
 void test1()
