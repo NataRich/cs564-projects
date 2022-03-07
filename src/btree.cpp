@@ -54,7 +54,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	std::fstream fileTest(outIndexName);
 	if(fileTest){ // file already existed
 		fileTest.close();
-		this->file = new BlobFile(outIndexName, true);
+		this->file = new BlobFile(outIndexName, false);
 		// First page is #1
 		this->headerPageNum = (PageId) 1;
 
