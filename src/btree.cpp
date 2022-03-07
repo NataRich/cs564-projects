@@ -270,7 +270,6 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, boo
 	}
 
 	bufMgr->unPinPage(this->file, cur_page_id, true);
-
 }
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
@@ -279,7 +278,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	bufMgr->readPage(file, headerPageNum, metaPage);
 	IndexMetaInfo* metaInfo = reinterpret_cast<IndexMetaInfo*>(metaPage);
 	bool isLeaf = metaInfo->height == 1;
-	
+  
 	RIDKeyPair<int> insertEntry;
 	insertEntry.set(rid, *((int*)key));
 	PageKeyPair<int> newChild;

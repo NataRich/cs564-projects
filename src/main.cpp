@@ -66,6 +66,7 @@ BufMgr * bufMgr = new BufMgr(100);
 void createRelationForward();
 void createRelationBackward();
 void createRelationRandom();
+void createRelationForwardLarge();
 void intTests();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void indexTests();
@@ -74,6 +75,9 @@ void test1();
 void test2();
 void test3();
 void errorTests();
+void test5();
+void test6();
+void test7();
 void deleteRelation();
 
 int main(int argc, char **argv)
@@ -135,11 +139,13 @@ int main(int argc, char **argv)
 
 	File::remove(relationName);
 
-	testBlobFile(bufMgr);
 	test1();
 	test2();
 	test3();
 	errorTests();
+	test5();
+	test6();
+	test7();
 
 	delete bufMgr;
 
@@ -188,6 +194,71 @@ void test3()
 	std::cout << "createRelationRandom" << std::endl;
 	createRelationRandom();
 	indexTests();
+	deleteRelation();
+}
+
+void test5()
+{
+	std::cout << "--------------------" << std::endl;
+	std::cout << "Additional Regular Test" << std::endl;
+	createRelationForward();
+
+	intTests();
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+
+	std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+	BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+
+	// run some tests
+	checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
+
+	deleteRelation();
+}
+
+
+void test6()
+{
+	std::cout << "--------------------" << std::endl;
+	std::cout << "IndexFile Reopen Test" << std::endl;
+	createRelationForward();
+
+	intTests();
+	intTests();
+
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+
+	deleteRelation();
+}
+
+void test7()
+{
+	std::cout << "--------------------" << std::endl;
+	std::cout << "Force non-leaf node split" << std::endl;
+	createRelationForwardLarge();
+
+	intTests();
+	intTests();
+
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+
 	deleteRelation();
 }
 
@@ -350,6 +421,52 @@ void createRelationRandom()
 		i++;
   }
   
+	file1->writePage(new_page_number, new_page);
+}
+
+
+void createRelationForwardLarge()
+{
+	std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch(const FileNotFoundException &e)
+	{
+	}
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  for(int i = 0; i < 50000; i++ )
+	{
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(const InsufficientSpaceException &e)
+			{
+				file1->writePage(new_page_number, new_page);
+  			new_page = file1->allocatePage(new_page_number);
+			}
+		}
+  }
+
 	file1->writePage(new_page_number, new_page);
 }
 
