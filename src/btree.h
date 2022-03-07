@@ -300,7 +300,7 @@ class BTreeIndex {
    /**
     * insert entrys into leafnode under node n
 	*/
-	void insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is_leaf, PageKeyPair<int>* new_child);
+	void insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, bool is_leaf, PageKeyPair<int>* new_child);
  public:
 
   /**

@@ -42,6 +42,9 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	this->leafOccupancy = INTARRAYLEAFSIZE-1;
 	this->nodeOccupancy = INTARRAYNONLEAFSIZE-1;
 
+	// init some scan parameters
+	this->scanExecuting = false;
+
 	// construct the indexName string (name of the index file)
 	std::ostringstream idxStr;
 	idxStr << relationName << '.' << attrByteOffset;
@@ -68,7 +71,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		// create MetaPage @388
 		Page *metaPage;
 		PageId metaPageId;
-		this->bufMgr->allocPage(this->file, metaPageId, metaPage);
+		bufMgr->allocPage(file, metaPageId, metaPage);
 		this->headerPageNum = metaPageId;
 		
 		IndexMetaInfo *metaInfo = reinterpret_cast<IndexMetaInfo *>(metaPage);
@@ -79,17 +82,17 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		// create RootPage @393
 		Page *rootPage;
 		PageId rootPageId;
-		this->bufMgr->allocPage(this->file, rootPageId, rootPage);
+		bufMgr->allocPage(file, rootPageId, rootPage);
 		metaInfo->rootPageNo = rootPageId;
-
+		this->rootPageNum = rootPageId;
 
 		// key1 <= entry < key2.
 		metaInfo->height = 1;
 		// Initialization of rootnode
-		LeafNodeInt* root_node = reinterpret_cast<LeafNodeInt*>(rootPage);
-		root_node->rightSibPageNo = Page::INVALID_NUMBER;
-		root_node->keyArray[0] = INT_MAX;
-		root_node->ridArray[0].page_number = Page::INVALID_NUMBER;
+		LeafNodeInt* rootNode = reinterpret_cast<LeafNodeInt*>(rootPage);
+		rootNode->rightSibPageNo = Page::INVALID_NUMBER;
+		rootNode->keyArray[0] = INT_MAX;
+		rootNode->ridArray[0].page_number = Page::INVALID_NUMBER;
 		
 		// insert entries
 		FileScan fscan(relationName, this->bufMgr);
@@ -131,12 +134,15 @@ BTreeIndex::~BTreeIndex()
 // BTreeIndex::insertEntry
 // -----------------------------------------------------------------------------
 
-void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is_leaf, PageKeyPair<int>* new_child)
+void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, bool is_leaf, PageKeyPair<int>* new_child)
 {
+	Page* cur_page;
+	bufMgr->readPage(this->file, cur_page_id, cur_page);
+
 	if (is_leaf)
 	{
 		LeafNodeInt* cur_node = reinterpret_cast<LeafNodeInt*>(cur_page);
-		/// find the last record's position
+		/// find the number of slots in this node
 		int entry_num = 0;
 		for (; entry_num <= this->leafOccupancy; entry_num++) {
 			if (cur_node->ridArray[entry_num].page_number == 0) {
@@ -183,6 +189,7 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 			new_right_sibling->ridArray[(this->leafOccupancy + 1) / 2].page_number = Page::INVALID_NUMBER;
 			new_right_sibling->keyArray[(this->leafOccupancy + 1) / 2] = INT_MAX;
 			
+			bufMgr->unPinPage(this->file, new_page_id, true);
 			/// return the new right sibling page for an insertion in the parent node
 			new_child->set(new_page_id, new_right_sibling->keyArray[0]);
 		}
@@ -192,7 +199,6 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 			cur_node->keyArray[entry_num + 1] = INT_MAX;
 			new_child->set(Page::INVALID_NUMBER, entry->key);
 		}
-		
 	}
 	else {
 		/// Nonleaf could be empty
@@ -208,13 +214,13 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 				break;
 			}
 		}
-		Page* child_page;
-		bufMgr->readPage(this->file, cur_node->pageNoArray[pos], child_page);
-		this->insertUnderNode(entry, child_page, cur_node->level, new_child);
+		PageId child_page_id = cur_node->pageNoArray[pos];
+		this->insertUnderNode(entry, child_page_id, cur_node->level, new_child);
 		
 
 		if (new_child->pageNo == Page::INVALID_NUMBER) {
-			return;
+		  bufMgr->unPinPage(this->file, cur_page_id, false);
+		  return;
 		}
 
 		/// find how many children do the node have ( the number of entries)
@@ -252,46 +258,51 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, Page* cur_page, bool is
 			new_right_sibling->pageNoArray[this->nodeOccupancy / 2 + 1] = Page::INVALID_NUMBER;
 			new_right_sibling->keyArray[this->nodeOccupancy / 2] = INT_MAX;
 			
+			bufMgr->unPinPage(this->file, new_page_id, true);
 			new_child->set(new_page_id, new_slot_key);
 		}
 		else {
 			/// set the next entry as [Page::INVALID_NUMBER, INT_MAX] to be identify as bound
-			cur_node->pageNoArray[entry_num] = Page::INVALID_NUMBER;
-			cur_node->keyArray[entry_num + 1] = INT_MAX;
+			cur_node->pageNoArray[entry_num + 1] = Page::INVALID_NUMBER;
+			cur_node->keyArray[entry_num] = INT_MAX;
 			new_child->set(Page::INVALID_NUMBER, entry->key);
 		}
-		
 	}
-}
 
+	bufMgr->unPinPage(this->file, cur_page_id, true);
+
+}
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-	RIDKeyPair<int>* insert_entry;
-	insert_entry->set(rid, *((int*)key));
-	Page* root_page;
-	bufMgr->readPage(this->file, this->rootPageNum, root_page);
-	PageKeyPair<int>* new_child;
+	Page* metaPage;
+	bufMgr->readPage(file, headerPageNum, metaPage);
+	IndexMetaInfo* metaInfo = reinterpret_cast<IndexMetaInfo*>(metaPage);
+	bool isLeaf = metaInfo->height == 1;
+	
+	RIDKeyPair<int> insertEntry;
+	insertEntry.set(rid, *((int*)key));
+	PageKeyPair<int> newChild;
 
-	Page* meta_page;
-	bufMgr->readPage(this->file, this->headerPageNum, meta_page);
-	IndexMetaInfo* meta_info = reinterpret_cast<IndexMetaInfo*>(meta_page);
-	bool is_leaf = (meta_info->height == 1);
-
-	this->insertUnderNode(insert_entry, root_page, is_leaf, new_child);
-
-	if (new_child->pageNo == Page::INVALID_NUMBER) {
+	insertUnderNode(&insertEntry, rootPageNum, isLeaf, &newChild);
+	if (newChild.pageNo == Page::INVALID_NUMBER) {
+		bufMgr->unPinPage(file, headerPageNum, false);
 		return;
 	}
 
-	Page* new_root_page = new Page;
-	PageId new_root_page_id;
-	this->bufMgr->allocPage(this->file, new_root_page_id, new_root_page);
-	NonLeafNodeInt* new_root_node = reinterpret_cast<NonLeafNodeInt*>(new_root_page);
-	new_root_node->pageNoArray[0] = this->rootPageNum;
-	new_root_node->keyArray[0] = new_child->key;
-	new_root_node->pageNoArray[1] = new_child->pageNo;
-	this->rootPageNum = new_root_page_id;
+	Page* newRootPage;
+	PageId newRootPageId;
+	bufMgr->allocPage(file, newRootPageId, newRootPage);
+	NonLeafNodeInt* newRootNode = reinterpret_cast<NonLeafNodeInt*>(newRootPage);
+	newRootNode->pageNoArray[0] = rootPageNum;
+	newRootNode->keyArray[0] = newChild.key;
+	newRootNode->pageNoArray[1] = newChild.pageNo;
+	newRootNode->level = isLeaf;
+	this->rootPageNum = newRootPageId;
+	metaInfo->height++;
+	metaInfo->rootPageNo = newRootPageId;
+	bufMgr->unPinPage(file, headerPageNum, true);
+	bufMgr->unPinPage(file, rootPageNum, true);
 	return;
 }
 
@@ -323,17 +334,29 @@ void BTreeIndex::startScan(const void* lowValParm,
 
 	scanExecuting = true;
 
-	// Set up initial scan parameters (from root)
+	// Check if the root is a leaf
+	currentPageNum = headerPageNum;
+	bufMgr->readPage(file, currentPageNum, currentPageData);
+	IndexMetaInfo* metaInfo = reinterpret_cast<IndexMetaInfo*>(currentPageData);
+	bool isRootLeaf = metaInfo->height == 1;
+	bufMgr->unPinPage(file, currentPageNum, false);
+
+	// Set up initial scan parameters
 	currentPageNum = rootPageNum;
 	bufMgr->readPage(file, currentPageNum, currentPageData);
-	NonLeafNodeInt* currNonLeafNode = 
-		reinterpret_cast<NonLeafNodeInt*>(currentPageData);
 	LeafNodeInt* leaf = NULL;
+	NonLeafNodeInt* currNonLeafNode = NULL;
+	if (isRootLeaf) {
+		leaf = reinterpret_cast<LeafNodeInt*>(currentPageData);
+	}
+	else {
+		currNonLeafNode = reinterpret_cast<NonLeafNodeInt*>(currentPageData);
+	}
 
 	// Loop until a leaf node is found or throw exception if no such key
 	while (!leaf) {
-		for (int entryId = 0; entryId < INTARRAYNONLEAFSIZE; entryId++) {
-			bool isLastEntry = entryId == (INTARRAYNONLEAFSIZE - 1);
+		for (int entryId = 0; entryId < nodeOccupancy; entryId++) {
+			bool isLastEntry = entryId == (nodeOccupancy - 1);
 			int currKey = currNonLeafNode->keyArray[entryId];
 			// Found a possible entry or the last entry of the node
 			if (currKey >= lowValInt || isLastEntry) {
@@ -379,16 +402,22 @@ void BTreeIndex::startScan(const void* lowValParm,
 	// Set a default (but impossible) nextEntry value
 	this->nextEntry = -1;
 	// Check if the wanted entry exists in the current leaf
-	for (int entryId = 0; entryId < INTARRAYLEAFSIZE; entryId++) {
+	for (int entryId = 0; entryId < leafOccupancy; entryId++) {
 		int currKey = leaf->keyArray[entryId];
 		PageId currPageNo = leaf->ridArray[entryId].page_number;
+
+		// Throw exception if currKey is already greater than the higher bound
+		if (currKey > highValInt) {
+			throw NoSuchKeyFoundException();
+		}
 
 		// Have traversed to the last valid entry of the leaf
 		if (currPageNo == Page::INVALID_NUMBER) {
 			break;
 		}
 
-		if (currKey > lowValInt || (currKey == lowValInt && lowOp == GTE)) {
+		if ((currKey > lowValInt && currKey < highValInt) || 
+			(currKey == lowValInt && lowOp == GTE)) {
 			this->nextEntry = entryId;
 			break;
 		}
@@ -408,7 +437,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 	// Set up the sibling page parameters and set the next entry to be the
 	// first entry of the sibling page/node, i.e., 0
 	bufMgr->unPinPage(file, currentPageNum, false);
-	currentPageNum = leaf->rightSibPageNo;
+	this->currentPageNum = leaf->rightSibPageNo;
 	bufMgr->readPage(file, currentPageNum, currentPageData);
 	this->nextEntry = 0;
 }
@@ -434,29 +463,37 @@ void BTreeIndex::scanNext(RecordId& outRid)
 	if (leaf->ridArray[nextEntry + 1].page_number == Page::INVALID_NUMBER) {
 		// Failed to find a sibling node, indicating scan completion
 		if (leaf->rightSibPageNo == Page::INVALID_NUMBER) {
-			nextEntry = -1;
+			this->nextEntry = -1;
+			return;
 		}
 
 		// Found a sibling node
 		// Set up the sibling page parameters
 		bufMgr->unPinPage(file, currentPageNum, false);
-		currentPageNum = leaf->rightSibPageNo;
+		this->currentPageNum = leaf->rightSibPageNo;
 		bufMgr->readPage(file, currentPageNum, currentPageData);
 		leaf = reinterpret_cast<LeafNodeInt*>(currentPageData);
 		int nextKey = leaf->keyArray[0];
 			
 		// Next key still within the boundary
 		if (nextKey < highValInt || (nextKey == highValInt && highOp == LTE)) {
-			nextEntry = 0;
+			this->nextEntry = 0;
 			return;
 		}
 
 		// Next key not within the boundary, indicating scan completion
-		nextEntry = -1;
+		this->nextEntry = -1;
+		return;
 	}
 
 	// The next leaf is a valid entry for the current leaf.
-	nextEntry++;
+	int nextKey = leaf->keyArray[nextEntry + 1];
+	if (nextKey < highValInt || (nextKey == highValInt && highOp == LTE)) {
+		this->nextEntry++;
+	}
+	else {
+		this->nextEntry = -1;
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -469,7 +506,7 @@ void BTreeIndex::endScan()
 		throw ScanNotInitializedException();
 	}
 
-	scanExecuting = false;
+	this->scanExecuting = false;
 	bufMgr->unPinPage(file, currentPageNum, false);
 }
 
