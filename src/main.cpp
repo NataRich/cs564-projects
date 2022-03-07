@@ -166,7 +166,7 @@ void testBlobFile(BufMgr *bufMgr){
 
 void test1()
 {
-	// Create a relation with tuples valued 0 to relationSize and perform index tests 
+	// Create a relation with tuples valued 0 to relationSize and perform index tests
 	// on attributes of all three types (int, double, string)
 	std::cout << "---------------------" << std::endl;
 	std::cout << "createRelationForward" << std::endl;
@@ -177,7 +177,7 @@ void test1()
 
 void test2()
 {
-	// Create a relation with tuples valued 0 to relationSize in reverse order and perform index tests 
+	// Create a relation with tuples valued 0 to relationSize in reverse order and perform index tests
 	// on attributes of all three types (int, double, string)
 	std::cout << "----------------------" << std::endl;
 	std::cout << "createRelationBackward" << std::endl;
@@ -188,7 +188,7 @@ void test2()
 
 void test3()
 {
-	// Create a relation with tuples valued 0 to relationSize in random order and perform index tests 
+	// Create a relation with tuples valued 0 to relationSize in random order and perform index tests
 	// on attributes of all three types (int, double, string)
 	std::cout << "--------------------" << std::endl;
 	std::cout << "createRelationRandom" << std::endl;
@@ -218,9 +218,8 @@ void test5()
 	// run some tests
 	checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
 
-	deleteRelation();
+		deleteRelation();
 }
-
 
 void test6()
 {
@@ -424,48 +423,47 @@ void createRelationRandom()
 	file1->writePage(new_page_number, new_page);
 }
 
-
 void createRelationForwardLarge()
 {
 	std::vector<RecordId> ridVec;
-  // destroy any old copies of relation file
+	// destroy any old copies of relation file
 	try
 	{
 		File::remove(relationName);
 	}
-	catch(const FileNotFoundException &e)
+	catch (const FileNotFoundException &e)
 	{
 	}
 
-  file1 = new PageFile(relationName, true);
+	file1 = new PageFile(relationName, true);
 
-  // initialize all of record1.s to keep purify happy
-  memset(record1.s, ' ', sizeof(record1.s));
+	// initialize all of record1.s to keep purify happy
+	memset(record1.s, ' ', sizeof(record1.s));
 	PageId new_page_number;
-  Page new_page = file1->allocatePage(new_page_number);
+	Page new_page = file1->allocatePage(new_page_number);
 
-  // Insert a bunch of tuples into the relation.
-  for(int i = 0; i < 50000; i++ )
+	// Insert a bunch of tuples into the relation.
+	for (int i = 0; i < 50000; i++)
 	{
-    sprintf(record1.s, "%05d string record", i);
-    record1.i = i;
-    record1.d = (double)i;
-    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+		sprintf(record1.s, "%05d string record", i);
+		record1.i = i;
+		record1.d = (double)i;
+		std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
 
-		while(1)
+		while (1)
 		{
 			try
 			{
-    		new_page.insertRecord(new_data);
+				new_page.insertRecord(new_data);
 				break;
 			}
-			catch(const InsufficientSpaceException &e)
+			catch (const InsufficientSpaceException &e)
 			{
 				file1->writePage(new_page_number, new_page);
-  			new_page = file1->allocatePage(new_page_number);
+				new_page = file1->allocatePage(new_page_number);
 			}
 		}
-  }
+	}
 
 	file1->writePage(new_page_number, new_page);
 }
