@@ -134,18 +134,18 @@ BTreeIndex::~BTreeIndex()
 // BTreeIndex::insertEntry
 // -----------------------------------------------------------------------------
 
-void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, bool is_leaf, PageKeyPair<int>* new_child)
+void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId curPageId, bool isLeaf, PageKeyPair<int>* newChild)
 {
-	Page* cur_page;
-	bufMgr->readPage(this->file, cur_page_id, cur_page);
+	Page* curPage;
+	bufMgr->readPage(this->file, curPageId, curPage);
 
-	if (is_leaf)
+	if (isLeaf)
 	{
-		LeafNodeInt* cur_node = reinterpret_cast<LeafNodeInt*>(cur_page);
+		LeafNodeInt* curNode = reinterpret_cast<LeafNodeInt*>(curPage);
 		/// find the number of slots in this node
-		int entry_num = 0;
-		for (; entry_num <= this->leafOccupancy; entry_num++) {
-			if (cur_node->ridArray[entry_num].page_number == 0) {
+		int entryNum = 0;
+		for (; entryNum <= this->leafOccupancy; entryNum++) {
+			if (curNode->ridArray[entryNum].page_number == 0) {
 				break;
 			}
 		}
@@ -153,8 +153,8 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, boo
 		/// No duplicate keys, so we don't need <= or >=
 		int pos = 0;
 		for (; pos <= this->leafOccupancy; pos++) {
-			if ((entry->key < cur_node->keyArray[pos] ) ||
-				(cur_node->ridArray[pos].page_number == 0)) {
+			if ((entry->key < curNode->keyArray[pos] ) ||
+				(curNode->ridArray[pos].page_number == 0)) {
 				break;
 			}
 		}
@@ -162,114 +162,114 @@ void BTreeIndex::insertUnderNode(RIDKeyPair<int>* entry, PageId cur_page_id, boo
 		/// If the position of insertion is at the end of the node, we don't need to move the slots after the
 		/// position one element behind.
 		if (pos < this->leafOccupancy) {
-			copyArray<int>(cur_node->keyArray + pos, cur_node->keyArray + pos + 1, entry_num - pos);
-			copyArray<RecordId>(cur_node->ridArray + pos, cur_node->ridArray + pos + 1, entry_num - pos);
+			copyArray<int>(curNode->keyArray + pos, curNode->keyArray + pos + 1, entryNum - pos);
+			copyArray<RecordId>(curNode->ridArray + pos, curNode->ridArray + pos + 1, entryNum - pos);
 		}
-		cur_node->keyArray[pos] = entry->key;
+		curNode->keyArray[pos] = entry->key;
 		/// Can I copy struct directly?
-		cur_node->ridArray[pos] = entry->rid;
+		curNode->ridArray[pos] = entry->rid;
 		
 		/// For every leafnode, we restrict the max number or records we store to INTARRAYLEAFSIZE-1
-		if (entry_num == this->leafOccupancy) {
+		if (entryNum == this->leafOccupancy) {
 			/// We split it half-half. For odd lengths, we allocate the left leaf one more record.
-			Page* new_page = new Page;
-			PageId new_page_id;
-			this->bufMgr->allocPage(this->file, new_page_id, new_page);
-			LeafNodeInt* new_right_sibling = reinterpret_cast<LeafNodeInt*>(new_page);
+			Page* newPage;
+			PageId newPageId;
+			this->bufMgr->allocPage(this->file, newPageId, newPage);
+			LeafNodeInt* newRightSibling = reinterpret_cast<LeafNodeInt*>(newPage);
 			/// I am not very sure about the copy index here
-			copyArray<int>(cur_node->keyArray + this->leafOccupancy / 2 + 1, new_right_sibling->keyArray, (this->leafOccupancy + 1) / 2);
-			copyArray<RecordId>(cur_node->ridArray + this->leafOccupancy / 2 + 1, new_right_sibling->ridArray, (this->leafOccupancy + 1) / 2);
+			copyArray<int>(curNode->keyArray + this->leafOccupancy / 2 + 1, newRightSibling->keyArray, (this->leafOccupancy + 1) / 2);
+			copyArray<RecordId>(curNode->ridArray + this->leafOccupancy / 2 + 1, newRightSibling->ridArray, (this->leafOccupancy + 1) / 2);
 			
-			new_right_sibling->rightSibPageNo = cur_node->rightSibPageNo;
-			cur_node->rightSibPageNo = new_page_id;
+			newRightSibling->rightSibPageNo = curNode->rightSibPageNo;
+			curNode->rightSibPageNo = newPageId;
 
 			/// set the next entry as [INT_MAx, Page::INVALID_NUMBER] to be identify as bound
-			cur_node->ridArray[this->leafOccupancy / 2 + 1].page_number = Page::INVALID_NUMBER;
-			cur_node->keyArray[this->leafOccupancy / 2 + 1] = INT_MAX;
-			new_right_sibling->ridArray[(this->leafOccupancy + 1) / 2].page_number = Page::INVALID_NUMBER;
-			new_right_sibling->keyArray[(this->leafOccupancy + 1) / 2] = INT_MAX;
+			curNode->ridArray[this->leafOccupancy / 2 + 1].page_number = Page::INVALID_NUMBER;
+			curNode->keyArray[this->leafOccupancy / 2 + 1] = INT_MAX;
+			newRightSibling->ridArray[(this->leafOccupancy + 1) / 2].page_number = Page::INVALID_NUMBER;
+			newRightSibling->keyArray[(this->leafOccupancy + 1) / 2] = INT_MAX;
 			
-			bufMgr->unPinPage(this->file, new_page_id, true);
+			bufMgr->unPinPage(this->file, newPageId, true);
 			/// return the new right sibling page for an insertion in the parent node
-			new_child->set(new_page_id, new_right_sibling->keyArray[0]);
+			newChild->set(newPageId, newRightSibling->keyArray[0]);
 		}
 		else {
 			/// set the next entry as [INT_MAx, Page::INVALID_NUMBER] to be identify as bound
-			cur_node->ridArray[entry_num + 1].page_number = Page::INVALID_NUMBER;
-			cur_node->keyArray[entry_num + 1] = INT_MAX;
-			new_child->set(Page::INVALID_NUMBER, entry->key);
+			curNode->ridArray[entryNum + 1].page_number = Page::INVALID_NUMBER;
+			curNode->keyArray[entryNum + 1] = INT_MAX;
+			newChild->set(Page::INVALID_NUMBER, entry->key);
 		}
 	}
 	else {
 		/// Nonleaf could be empty
-		NonLeafNodeInt* cur_node = reinterpret_cast<NonLeafNodeInt*>(cur_page);
+		NonLeafNodeInt* curNode = reinterpret_cast<NonLeafNodeInt*>(curPage);
 		/// find the position of PageNo to go down the tree
 		/// We use >= for lower keys and < for higher keys
 		/// logic: pageNoArray[0] store the records that have the keys less than keyArray[0]
 		/// pageNoArray[n] store the records that have the keys less than keyArray[n] but greater or equal than keyArray[n-1]
 		int pos = 0;
 		for (; pos <= this->nodeOccupancy; pos++) {
-			if ((entry->key < cur_node->keyArray[pos]) ||
-				(cur_node->pageNoArray[pos+1] == 0)) {
+			if ((entry->key < curNode->keyArray[pos]) ||
+				(curNode->pageNoArray[pos+1] == 0)) {
 				break;
 			}
 		}
-		PageId child_page_id = cur_node->pageNoArray[pos];
-		this->insertUnderNode(entry, child_page_id, cur_node->level, new_child);
+		PageId childPageId = curNode->pageNoArray[pos];
+		this->insertUnderNode(entry, childPageId, curNode->level, newChild);
 		
 
-		if (new_child->pageNo == Page::INVALID_NUMBER) {
-		  bufMgr->unPinPage(this->file, cur_page_id, false);
+		if (newChild->pageNo == Page::INVALID_NUMBER) {
+		  bufMgr->unPinPage(this->file, curPageId, false);
 		  return;
 		}
 
 		/// find how many children do the node have ( the number of entries)
-		int entry_num = 0;
-		for (; entry_num <= this->nodeOccupancy+1; entry_num++) {
-			if (cur_node->pageNoArray[entry_num] == Page::INVALID_NUMBER) {
+		int entryNum = 0;
+		for (; entryNum <= this->nodeOccupancy+1; entryNum++) {
+			if (curNode->pageNoArray[entryNum] == Page::INVALID_NUMBER) {
 				break;
 			}
 		}
 
 		if (pos < this->nodeOccupancy) {
-			copyArray<int>(cur_node->keyArray + pos, cur_node->keyArray + pos + 1, entry_num - 1 - pos);
-			copyArray<PageId>(cur_node->pageNoArray + pos + 1, cur_node->pageNoArray + pos + 2, entry_num - 1 - pos);
+			copyArray<int>(curNode->keyArray + pos, curNode->keyArray + pos + 1, entryNum - 1 - pos);
+			copyArray<PageId>(curNode->pageNoArray + pos + 1, curNode->pageNoArray + pos + 2, entryNum - 1 - pos);
 		}
-		cur_node->keyArray[pos] = new_child->key;
+		curNode->keyArray[pos] = newChild->key;
 		/// Can I copy struct directly?
-		cur_node->pageNoArray[pos + 1] = new_child->pageNo;
+		curNode->pageNoArray[pos + 1] = newChild->pageNo;
 		
 		/// For every leafnode, we restrict the max number or records we store to INTARRAYLEAFSIZE-1
-		if (entry_num == this->nodeOccupancy + 1) {
+		if (entryNum == this->nodeOccupancy + 1) {
 			/// We split it half-half. For odd lengths, we allocate the left leaf one more record.
-			Page* new_page = new Page;
-			PageId new_page_id;
-			this->bufMgr->allocPage(this->file, new_page_id, new_page);
-			NonLeafNodeInt* new_right_sibling = reinterpret_cast<NonLeafNodeInt*>(new_page);
-			int new_slot_key = cur_node->keyArray[(this->nodeOccupancy+1) / 2];
+			Page* newPage;
+			PageId newPageId;
+			this->bufMgr->allocPage(this->file, newPageId, newPage);
+			NonLeafNodeInt* newRightSibling = reinterpret_cast<NonLeafNodeInt*>(newPage);
+			int newSlotKey = curNode->keyArray[(this->nodeOccupancy+1) / 2];
 
-			copyArray<int>(cur_node->keyArray + (this->nodeOccupancy + 1) / 2 + 1, new_right_sibling->keyArray, this->nodeOccupancy / 2);
-			copyArray<PageId>(cur_node->pageNoArray + (this->nodeOccupancy + 1) / 2 + 1, new_right_sibling->pageNoArray, this->nodeOccupancy / 2 + 1);
-			new_right_sibling->level = cur_node->level;
+			copyArray<int>(curNode->keyArray + (this->nodeOccupancy + 1) / 2 + 1, newRightSibling->keyArray, this->nodeOccupancy / 2);
+			copyArray<PageId>(curNode->pageNoArray + (this->nodeOccupancy + 1) / 2 + 1, newRightSibling->pageNoArray, this->nodeOccupancy / 2 + 1);
+			newRightSibling->level = curNode->level;
 
 			/// set the next entry as [Page::INVALID_NUMBER, INT_MAX] to be identify as bound
-			cur_node->pageNoArray[(this->nodeOccupancy + 1) / 2 + 1] = Page::INVALID_NUMBER;
-			cur_node->keyArray[(this->nodeOccupancy + 1) / 2] = INT_MAX;
-			new_right_sibling->pageNoArray[this->nodeOccupancy / 2 + 1] = Page::INVALID_NUMBER;
-			new_right_sibling->keyArray[this->nodeOccupancy / 2] = INT_MAX;
+			curNode->pageNoArray[(this->nodeOccupancy + 1) / 2 + 1] = Page::INVALID_NUMBER;
+			curNode->keyArray[(this->nodeOccupancy + 1) / 2] = INT_MAX;
+			newRightSibling->pageNoArray[this->nodeOccupancy / 2 + 1] = Page::INVALID_NUMBER;
+			newRightSibling->keyArray[this->nodeOccupancy / 2] = INT_MAX;
 			
-			bufMgr->unPinPage(this->file, new_page_id, true);
-			new_child->set(new_page_id, new_slot_key);
+			bufMgr->unPinPage(this->file, newPageId, true);
+			newChild->set(newPageId, newSlotKey);
 		}
 		else {
 			/// set the next entry as [Page::INVALID_NUMBER, INT_MAX] to be identify as bound
-			cur_node->pageNoArray[entry_num + 1] = Page::INVALID_NUMBER;
-			cur_node->keyArray[entry_num] = INT_MAX;
-			new_child->set(Page::INVALID_NUMBER, entry->key);
+			curNode->pageNoArray[entryNum + 1] = Page::INVALID_NUMBER;
+			curNode->keyArray[entryNum] = INT_MAX;
+			newChild->set(Page::INVALID_NUMBER, entry->key);
 		}
 	}
 
-	bufMgr->unPinPage(this->file, cur_page_id, true);
+	bufMgr->unPinPage(this->file, curPageId, true);
 }
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
