@@ -71,7 +71,7 @@ namespace badgerdb
       fileTest.close();
       this->file = new BlobFile(outIndexName, false);
       // First page is #1
-      this->headerPageNum = (PageId)1;
+      this->headerPageNum = this->file->getFirstPageNo();
 
       Page *metaPage;
       bufMgr->readPage(file, headerPageNum, metaPage);
@@ -142,11 +142,10 @@ namespace badgerdb
 
   BTreeIndex::~BTreeIndex()
   {
-    // TODO: close pinned B+ tree pages
-
     this->bufMgr->flushFile(this->file);
     delete this->file;
     this->file = NULL;
+    this->scanExecuting = false;
   }
 
   // -----------------------------------------------------------------------------
