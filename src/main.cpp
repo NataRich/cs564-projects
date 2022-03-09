@@ -66,6 +66,7 @@ BufMgr * bufMgr = new BufMgr(100);
 void createRelationForward();
 void createRelationBackward();
 void createRelationRandom();
+void createRelationRandomVal();
 void createRelationForwardLarge();
 void intTests();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
@@ -78,6 +79,7 @@ void errorTests();
 void test5();
 void test6();
 void test7();
+void test8();
 void deleteRelation();
 
 int main(int argc, char **argv)
@@ -145,6 +147,7 @@ int main(int argc, char **argv)
 	errorTests();
 	test5();
 	test6();
+	test8();
 	test7();
 
 	delete bufMgr;
@@ -203,7 +206,12 @@ void test5()
 	std::cout << "Additional Regular Test" << std::endl;
 	createRelationForward();
 
-	intTests();
+	{
+		std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+		checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
+	}
+
 	try
 	{
 		File::remove(intIndexName);
@@ -212,13 +220,7 @@ void test5()
 	{
 	}
 
-	std::cout << "Create a B+ Tree index on the integer field" << std::endl;
-	BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
-
-	// run some tests
-	checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
-
-		deleteRelation();
+	deleteRelation();
 }
 
 void test6()
@@ -248,7 +250,27 @@ void test7()
 	createRelationForwardLarge();
 
 	intTests();
-	intTests();
+
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+
+	deleteRelation();
+}
+
+void test8()
+{
+	std::cout << "--------------------" << std::endl;
+	std::cout << "Random value test" << std::endl;
+	createRelationRandom();
+	{
+		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+		checkPassFail(intScan(&index, -25, GT, 5040, LT), 5000)
+	}
 
 	try
 	{
@@ -415,11 +437,72 @@ void createRelationRandom()
 		}
 
 		int temp = intvec[relationSize-1-i];
-		intvec[relationSize-1-i] = intvec[pos];
+		intvec[relationSize - 1 - i] = intvec[pos];
 		intvec[pos] = temp;
 		i++;
   }
-  
+
+  file1->writePage(new_page_number, new_page);
+}
+
+void createRelationRandomVal()
+{
+	// destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+	file1 = new PageFile(relationName, true);
+
+	// initialize all of record1.s to keep purify happy
+	memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+	Page new_page = file1->allocatePage(new_page_number);
+
+	// insert records in random order
+
+	std::vector<int> intvec(relationSize);
+	for (int i = 0; i < relationSize; i++)
+	{
+		intvec[i] = i;
+	}
+
+	long pos;
+	int val;
+	int i = 0;
+	while (i < relationSize)
+	{
+		pos = random() % (relationSize - i);
+		val = random() % relationSize;
+		sprintf(record1.s, "%05d string record", val);
+		record1.i = val;
+		record1.d = val;
+
+		std::string new_data(reinterpret_cast<char *>(&record1), sizeof(RECORD));
+
+		while (1)
+		{
+			try
+			{
+				new_page.insertRecord(new_data);
+				break;
+			}
+			catch (const InsufficientSpaceException &e)
+			{
+				file1->writePage(new_page_number, new_page);
+				new_page = file1->allocatePage(new_page_number);
+			}
+		}
+
+		int temp = intvec[relationSize - 1 - i];
+		intvec[relationSize - 1 - i] = intvec[pos];
+		intvec[pos] = temp;
+		i++;
+	}
+
 	file1->writePage(new_page_number, new_page);
 }
 
