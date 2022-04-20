@@ -7,7 +7,7 @@ create:
 
 test: 
 # 3 is not efficient; we omit it here.
-	@for i in 1 2 4 5 6 7; do \
+	@for i in 1 2 3 4 5 6 7; do \
 		sqlite3 $(DB_NAME) < query$$i.sql; \
 	done
 
