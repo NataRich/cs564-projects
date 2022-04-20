@@ -39,7 +39,7 @@ class Item:
         buy_price : NULLABLE
     """
     def __init__(self, uid, seller_id, name, currently, buy_price, first_bid,
-            num_bids, location, country, started, ends, desc):
+            num_bids, started, ends, desc):
         self.uid       = uid
         self.seller_id = seller_id
         self.name      = name
