@@ -4,6 +4,8 @@ from re import sub
 
 safernull = '"NULL"'
 columnSeparator = "|"
+reportdir = os.path.join(os.getcwd(), 'report')
+resultdir = os.path.join(os.getcwd(), 'result')
 
 # Dictionary of months used for date transformation
 MONTHS = {'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',\
@@ -63,10 +65,6 @@ def saferstr(string):
     if string is None:
         return safernull
     return '"' + string.replace('"', '""') + '"'
-
-
-reportdir = os.path.join(os.getcwd(), 'report')
-resultdir = os.path.join(os.getcwd(), 'result')
 
 
 class CategoryData:
@@ -338,8 +336,9 @@ class Parser:
         self.i = ItemData()
         self.ci = CategorizationData()
         
+        self.logged = False
         self.nullmap = {}
-        self.logs = []
+        self.gnullmap = {}
         self.f = ''
         self.fn = ''
 
@@ -348,16 +347,19 @@ class Parser:
         assert mark is not None
 
         if value is None:
+            if key not in self.gnullmap:
+                self.gnullmap[key] = [self.fn]
+                self.logged = True
+            elif not self.logged:
+                self.gnullmap[key].append(self.fn)
+                self.logged = True
+
             log = f'{mark}'
             if key not in self.nullmap:
                 self.nullmap[key] = [log]
             else:
                 self.nullmap[key].append(log)
         return value
-
-    def _log_none(self, key, mark):
-        log = f'Unexpected null found in {key} of {mark}'
-        self.logs.append(log)
 
     def _get(self, d, k, mark, key=None):
         return self._log_if_none(key or k, d[k] if k in d else None, mark)
@@ -381,19 +383,8 @@ class Parser:
             return
 
         for e in bids:
-            if e is None:
-                self._log_none('Bids', item_id)
-                continue
-
             bid = self._get(e, 'Bid', item_id)
-            if bid is None:
-                self._log_none('Bid of Bids', item_id)
-                continue
-
             bdr = self._get(bid, 'Bidder', item_id)
-            if bdr is None:
-                self._log_none('Bidder of Bids', item_id)
-                continue
 
             user_id = self._get(bdr, 'UserID', item_id, key='BidderID')
             rating = self._get(bdr, 'Rating', item_id, key='BidderRating')
@@ -403,16 +394,13 @@ class Parser:
 
             time = transformDttm(self._get(bid, 'Time', item_id, key='BidTime'))
             amount = transformDollar(self._get(bid, 'Amount', item_id, key='BidAmount'))
-            self.b.add(user_id, item_id, time, amount)  # TODO: transform
+            self.b.add(user_id, item_id, time, amount)
 
     def _parse_item(self, item, item_id):
         assert item is not None
         assert item_id is not None
 
         seller = self._get(item, 'Seller', item_id)
-        if seller is None:
-            self._log_none('Seller', item_id)
-            return
         
         user_id = self._get(seller, 'UserID', item_id, key='SellerID')
         rating = self._get(seller, 'Rating', item_id, key='SellerRating')
@@ -434,6 +422,7 @@ class Parser:
     def set_file(self, file):
         self.f = os.path.basename(file)
         self.fn = self.f.split('.')[0]
+        self.logged = False
 
     def parse(self, items):
         assert items is not None
@@ -453,11 +442,21 @@ class Parser:
         self.i.flush(os.path.join(resultdir, 'item.dat'))
         self.ci.flush(os.path.join(resultdir, 'categorization.dat'))
 
+        target_gnull = os.path.join(reportdir, '0-nullmap.txt')
+        with open(target_gnull, 'w+') as f:
+            f.write(f'Global Null Map (all files):\n\n')
+            f.write(f'These keys were sometimes null when parsing:\n')
+            for k in self.gnullmap:
+                f.write(f'  {k}\n')
+            f.write('\nDetails see below:\n')
+            for k in self.gnullmap:
+                f.write(f'{k} was null in\n')
+                for fn in self.gnullmap[k]:
+                    f.write(f'  {fn}\n')
+        self.gnullmap = {}
 
     def report(self):
         target_null = os.path.join(reportdir, f'{self.fn}_nullmap.txt')
-        target_log = os.path.join(reportdir, f'{self.fn}_log.txt')
-        
         with open(target_null, 'w+') as f:
             f.write(f'Null Map ({self.fn}):\n\n')
             f.write(f'These keys were sometimes null when parsing {self.f}:\n')
@@ -467,11 +466,6 @@ class Parser:
             for k in self.nullmap:
                 f.write(f'{k} was null at\n')
                 for ln in self.nullmap[k]:
-                    f.write(f'    {ln}\n')
+                    f.write(f'  {ln}\n')
         self.nullmap = {}
 
-        with open(target_log, 'w+') as f:
-            f.write('Null Log:\n\n')
-            for ln in self.logs:
-                f.write(f'{ln}\n')
-        self.logs = []
