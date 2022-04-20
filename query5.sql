@@ -1,1 +1,1 @@
-SELECT COUNT(u.uid) FROM User u WHERE u.rating > 1000;
+SELECT COUNT(DISTINCT i.seller_id) FROM Item i JOIN User u ON i.seller_id == u.uid AND u.rating > 1000;
