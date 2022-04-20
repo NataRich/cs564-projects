@@ -1,9 +1,12 @@
 # This file serve as a tester and SHOULD NOT be submitted.
 DB_NAME = ebay.db
 
-create:
-	sqlite3 $(DB_NAME) < create.sql
-	sqlite3 $(DB_NAME) < load.txt
+parse:
+	@bash runParser.sh
+
+load:
+	@sqlite3 $(DB_NAME) < create.sql
+	@sqlite3 $(DB_NAME) < load.txt
 
 test: 
 # 3 is not efficient; we omit it here.
