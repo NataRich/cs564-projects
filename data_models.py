@@ -127,6 +127,7 @@ class UserData:
                     self.locations[i] = saferstr(location)
                 if self.countries[i] == safernull and country is not None:
                     self.countries[i] = saferstr(country)
+                return
 
         loc = saferstr(location) if location is not None else safernull
         cnt = saferstr(country) if country is not None else safernull
