@@ -7,8 +7,8 @@ from data_models import *
 
 
 columnSeparator = "|"
-reportdir = os.path.join(os.getcwd(), 'report')
-resultdir = os.path.join(os.getcwd(), 'result')
+reportdirName = 'report'
+resultdirName = 'result'
 
 # Dictionary of months used for date transformation
 MONTHS = {'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',\
@@ -162,6 +162,12 @@ class Parser:
             self._parse_item(item, item_id)
 
     def flush(self):
+        resultdir = os.path.join(os.getcwd(), resultdirName)
+        if not os.path.exists(resultdirName):
+            os.makedirs(resultdirName)
+        reportdir = os.path.join(os.getcwd(), reportdirName)
+        if not os.path.exists(reportdirName):
+            os.makedirs(reportdirName)
         self.c.flush(os.path.join(resultdir, 'category.dat'))
         self.u.flush(os.path.join(resultdir, 'user.dat'))
         self.b.flush(os.path.join(resultdir, 'bid.dat'))
@@ -182,6 +188,9 @@ class Parser:
         self.gnullmap = {}
 
     def report(self):
+        reportdir = os.path.join(os.getcwd(), reportdirName)
+        if not os.path.exists(reportdirName):
+            os.makedirs(reportdirName)
         target_null = os.path.join(reportdir, f'{self.fn}_nullmap.txt')
         with open(target_null, 'w+') as f:
             f.write(f'Null Map ({self.fn}):\n\n')
@@ -213,7 +222,7 @@ def parseJson(json_file):
 
 def main(argv):
     if len(argv) < 2:
-        print >> sys.stderr, 'Usage: python parser.py <path to json files>'
+        print('Usage: python parser.py <path to json files>', file=sys.stderr)
         sys.exit(1)
     # loops over all .json files in the argument
     for f in argv[1:]:
