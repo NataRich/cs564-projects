@@ -8,11 +8,18 @@ parser = Parser()
 
 
 def isJson(f):
+    """
+    Returns true if a file ends in .json
+    """
+
     return len(f) > 5 and f[-5:] == '.json'
 
 
 
 def parseJson(json_file):
+    """
+    Parses a single json file and creates two log reports.
+    """
     parser.set_file(json_file)
     with open(json_file, 'r') as f:
         items = loads(f.read())['Items'] # creates a Python dictionary of Items for the supplied json file
