@@ -25,6 +25,18 @@ def saferstr(string):
     return '"' + string.replace('"', '""') + '"'
 
 
+def saferfloat(string):
+    if string is None:
+        return safernull
+    return float(string)
+
+
+def saferint(string):
+    if string is None:
+        return safernull
+    return int(string)
+
+
 class CategoryData:
     _counter = 0
     _ln = '{}|{}'
@@ -95,10 +107,8 @@ class UserData:
                     self.countries[i] = saferstr(country)
                 return
 
-        rat = rating if rating is not None else safernull
-
         self.uids.append(saferid)
-        self.ratings.append(rat)
+        self.ratings.append(saferint(rating))
         self.locations.append(saferstr(location))
         self.countries.append(saferstr(country))
 
@@ -248,10 +258,10 @@ class ItemData:
         self.uids.append(uid)
         self.seller_ids.append(saferstr(seller_id))
         self.names.append(saferstr(name))
-        self.currentlys.append(saferstr(currently))
-        self.buy_prices.append(saferstr(buy_price))
-        self.first_bids.append(saferstr(first_bid))
-        self.num_bidss.append(saferstr(num_bids))
+        self.currentlys.append(saferfloat(currently))
+        self.buy_prices.append(saferfloat(buy_price))
+        self.first_bids.append(saferfloat(first_bid))
+        self.num_bidss.append(saferint(num_bids))
         self.starteds.append(saferstr(started))
         self.endss.append(saferstr(ends))
         self.descs.append(saferstr(desc))
