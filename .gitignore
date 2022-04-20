@@ -9,4 +9,4 @@ fmt
 report
 result
 *.json
-ebayDB
+ebay.db

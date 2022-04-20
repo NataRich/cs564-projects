@@ -3,6 +3,7 @@
 .import result/category.dat Category
 .import result/categorization.dat Categorization
 .import result/user.dat User
+update User set location = null where location = 'NULL';
 update User set country = null where country = 'NULL';
 .import result/item.dat Item
 update Item set buy_price = null where buy_price = 'NULL';

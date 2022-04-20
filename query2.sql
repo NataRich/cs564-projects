@@ -1,0 +1,1 @@
+SELECT COUNT(u.uid) FROM User u WHERE u.location = 'New York';
