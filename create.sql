@@ -13,7 +13,7 @@ create table Category (
 
 create table Categorization (
     categorization_index    INT PRIMARY KEY NOT NULL,
-    item_id                  INT NOT NULL,
+    item_id                 INT NOT NULL,
     category_id             INT NOT NULL
 );
 
