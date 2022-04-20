@@ -15,7 +15,6 @@ def isJson(f):
     return len(f) > 5 and f[-5:] == '.json'
 
 
-
 def parseJson(json_file):
     """
     Parses a single json file and creates two log reports.
@@ -29,7 +28,7 @@ def parseJson(json_file):
 
 def main(argv):
     if len(argv) < 2:
-        print >> sys.stderr, 'Usage: python skeleton_json_parser.py <path to json files>'
+        print >> sys.stderr, 'Usage: python parser.py <path to json files>'
         sys.exit(1)
     # loops over all .json files in the argument
     for f in argv[1:]:
