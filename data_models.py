@@ -2,6 +2,7 @@ import os
 from re import sub
 
 
+safernull = '"NULL"'
 columnSeparator = "|"
 
 # Dictionary of months used for date transformation
@@ -10,6 +11,9 @@ MONTHS = {'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',\
 
 
 def transformMonth(mon):
+    """
+    Converts month to a number, e.g. 'Dec' to '12'
+    """
     if mon in MONTHS:
         return MONTHS[mon]
     else:
@@ -17,6 +21,9 @@ def transformMonth(mon):
 
 
 def transformDttm(dttm):
+    """
+    Transforms a timestamp from Mon-DD-YY HH:MM:SS to YYYY-MM-DD HH:MM:SS
+    """
     dttm = dttm.strip().split(' ')
     dt = dttm[0].split('-')
     date = '20' + dt[2] + '-'
@@ -25,6 +32,10 @@ def transformDttm(dttm):
 
 
 def transformDollar(money):
+    """
+    Transform a dollar value amount from a string like $3,453.23 to XXXXX.xx
+    """
+
     if money == None or len(money) == 0:
         return money
     return sub(r'[^\d.]', '', money)
@@ -49,10 +60,11 @@ def saferstr(string):
         quotes escaped.
     """
 
+    if string is None:
+        return safernull
     return '"' + string.replace('"', '""') + '"'
 
 
-safernull = '"NULL"'
 reportdir = os.path.join(os.getcwd(), 'report')
 resultdir = os.path.join(os.getcwd(), 'result')
 
@@ -91,10 +103,8 @@ class CategoryData:
         return [CategoryData._ln.format(uid, name) 
                 for uid, name in zip(self.uids, self.names)]
 
-    def flush(self, file):
-        target = os.path.join(resultdir, file)
-
-        with open(target, 'w+') as f:
+    def flush(self, path):
+        with open(path, 'w+') as f:
             for i in range(len(self.uids)):
                 ln = CategoryData._ln.format(self.uids[i], self.names[i])
                 f.write(f'{ln}\n')
@@ -129,24 +139,20 @@ class UserData:
                     self.countries[i] = saferstr(country)
                 return
 
-        loc = saferstr(location) if location is not None else safernull
-        cnt = saferstr(country) if country is not None else safernull
         rat = rating if rating is not None else safernull
 
         self.uids.append(saferid)
         self.ratings.append(rat)
-        self.locations.append(loc)
-        self.countries.append(cnt)
+        self.locations.append(saferstr(location))
+        self.countries.append(saferstr(country))
 
     def lineify(self):
         return [UserData._ln.format(uid, rating, location, country)
                 for uid, rating, location, country
                 in zip(self.uids, self.ratings, self.locations, self.countries)]
 
-    def flush(self, file):
-        target = os.path.join(resultdir, file)
-
-        with open(target, 'w+') as f:
+    def flush(self, path):
+        with open(path, 'w+') as f:
             for i in range(len(self.uids)):
                 ln = UserData._ln.format(self.uids[i], self.ratings[i],
                         self.locations[i], self.countries[i])
@@ -181,16 +187,12 @@ class BidData:
         assert user_id is not None
         assert item_id is not None
 
-        saferuserid = saferstr(user_id)
-        tm = saferstr(time) if time is not None else safernull
-        am = saferstr(amount) if amount is not None else safernull
-
         uid = self.next_uid()
         self.uids.append(uid)
-        self.user_ids.append(saferuserid)
+        self.user_ids.append(saferstr(user_id))
         self.item_ids.append(item_id)
-        self.times.append(tm)
-        self.amounts.append(am)
+        self.times.append(saferstr(time))
+        self.amounts.append(saferstr(amount))
 
         return uid
 
@@ -200,10 +202,8 @@ class BidData:
                 in zip(self.uids, self.user_ids, self.item_ids, self.times,
                     self.amounts)]
 
-    def flush(self, file):
-        target = os.path.join(resultdir, file)
-
-        with open(target, 'w+') as f:
+    def flush(self, path):
+        with open(path, 'w+') as f:
             for i in range(len(self.uids)):
                 ln = BidData._ln.format(self.uids[i], self.user_ids[i],
                         self.item_ids[i], self.times[i], self.amounts[i])
@@ -253,10 +253,8 @@ class CategorizationData:
                 for uid, item_id, cate_id 
                 in zip(self.uids, self.item_ids, self.cate_ids)]
 
-    def flush(self, file):
-        target = os.path.join(resultdir, file)
-
-        with open(target, 'w+') as f:
+    def flush(self, path):
+        with open(path, 'w+') as f:
             for i in range(len(self.uids)):
                 ln = CategorizationData._ln.format(self.uids[i],
                         self.item_ids[i], self.cate_ids[i])
@@ -291,25 +289,16 @@ class ItemData:
         assert uid not in self.uids
         assert seller_id is not None
 
-        nm = saferstr(name) if name is not None else safernull
-        cur = saferstr(currently) if currently is not None else safernull
-        buy = saferstr(buy_price) if buy_price is not None else safernull
-        fb = saferstr(first_bid) if first_bid is not None else safernull
-        nb = saferstr(num_bids) if num_bids is not None else safernull
-        st = saferstr(started) if started is not None else safernull
-        ed = saferstr(ends) if ends is not None else safernull
-        de = saferstr(desc) if desc is not None else safernull
-
         self.uids.append(uid)
         self.seller_ids.append(saferstr(seller_id))
-        self.names.append(nm)
-        self.currentlys.append(cur)
-        self.buy_prices.append(buy)
-        self.first_bids.append(fb)
-        self.num_bidss.append(nb)
-        self.starteds.append(st)
-        self.endss.append(ed)
-        self.descs.append(de)
+        self.names.append(saferstr(name))
+        self.currentlys.append(saferstr(currently))
+        self.buy_prices.append(saferstr(buy_price))
+        self.first_bids.append(saferstr(first_bid))
+        self.num_bidss.append(saferstr(num_bids))
+        self.starteds.append(saferstr(started))
+        self.endss.append(saferstr(ends))
+        self.descs.append(saferstr(desc))
     
     def lineify(self):
         return [ItemData._ln.format(uid, seller_id, name, currently, buy_price,
@@ -320,10 +309,8 @@ class ItemData:
                     self.buy_prices, self.first_bids, self.num_bidss,
                     self.starteds, self.endss, self.descs)]
 
-    def flush(self, file):
-        target = os.path.join(resultdir, file)
-
-        with open(target, 'w+') as f:
+    def flush(self, path):
+        with open(path, 'w+') as f:
             for i in range(len(self.uids)):
                 ln = ItemData._ln.format(self.uids[i], self.seller_ids[i],
                         self.names[i], self.currentlys[i], self.buy_prices[i],
@@ -460,11 +447,11 @@ class Parser:
             self._parse_item(item, item_id)
 
     def flush(self):
-        self.c.flush('category.dat')
-        self.u.flush('user.dat')
-        self.b.flush('bid.dat')
-        self.i.flush('item.dat')
-        self.ci.flush('categorization.dat')
+        self.c.flush(os.path.join(resultdir, 'category.dat'))
+        self.u.flush(os.path.join(resultdir, 'user.dat'))
+        self.b.flush(os.path.join(resultdir, 'bid.dat'))
+        self.i.flush(os.path.join(resultdir, 'item.dat'))
+        self.ci.flush(os.path.join(resultdir, 'categorization.dat'))
 
 
     def report(self):
@@ -473,7 +460,7 @@ class Parser:
         
         with open(target_null, 'w+') as f:
             f.write(f'Null Map ({self.fn}):\n\n')
-            f.write(f'These keys were null when parsing {self.f}:\n')
+            f.write(f'These keys were sometimes null when parsing {self.f}:\n')
             for k in self.nullmap:
                 f.write(f'  {k}\n')
             f.write('\nDetails see below (numbers are ItemIDs):\n')
@@ -486,5 +473,5 @@ class Parser:
         with open(target_log, 'w+') as f:
             f.write('Null Log:\n\n')
             for ln in self.logs:
-                f.write(f'{fn}\n')
+                f.write(f'{ln}\n')
         self.logs = []
