@@ -35,11 +35,11 @@ create table Item (
 );
 
 create table Categorization (
-    categorization_index    INT PRIMARY KEY NOT NULL,
+    uid    INT PRIMARY KEY NOT NULL,
     item_id                 INT NOT NULL,
-    category_id             INT NOT NULL,
+    cate_id             INT NOT NULL,
     FOREIGN KEY (item_id) REFERENCES Item(item_id),
-    FOREIGN KEY (category_id) REFERENCES Category(category_id)
+    FOREIGN KEY (cate_id) REFERENCES Category(category_id)
 );
 
 create table Bid (
@@ -53,4 +53,4 @@ create table Bid (
 );
 
 create index idx_categorization_item_id on Categorization (item_id);
-create index idx_categorization_category_id on Categorization (category_id);
+create index idx_categorization_category_id on Categorization (cate_id);
