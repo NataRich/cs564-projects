@@ -1,0 +1,13 @@
+# env
+.vscode
+
+# build files
+__pycache__
+
+# intermediate files and results
+fmt
+report
+result
+*.json
+ebay.db
+
